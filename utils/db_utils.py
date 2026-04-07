@@ -1,9 +1,29 @@
+import os
 import mysql.connector
 from mysql.connector import Error
 from sqlalchemy import create_engine
 import pandas as pd
 import logging
-from config.db_config import DB_CONFIG, SQLALCHEMY_DATABASE_URL
+from dotenv import load_dotenv
+
+load_dotenv()  # loads .env locally, ignored on cloud
+
+DB_CONFIG = {
+    "host": os.environ.get("MYSQLHOST"),
+    "port": int(os.environ.get("MYSQLPORT", 3306)),
+    "user": os.environ.get("MYSQLUSER"),
+    "password": os.environ.get("MYSQLPASSWORD"),
+    "database": os.environ.get("MYSQLDATABASE")
+}
+
+# Add required MySQL connection properties safely
+conn_config = DB_CONFIG.copy()
+conn_config['charset'] = 'utf8mb4'
+conn_config['use_unicode'] = True
+conn_config['autocommit'] = True
+
+# SQLAlchemy connection string format: mysql+pymysql://user:password@host:port/dbname
+SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
 
 # Configure basic logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='db_operations.log')
@@ -13,7 +33,7 @@ class DatabaseManager:
     
     def __init__(self):
         """Initialize connection and engine variables"""
-        self.config = DB_CONFIG
+        self.config = conn_config
         self.connection = None
         self.engine = None
         
