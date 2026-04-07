@@ -4,7 +4,9 @@ import pandas as pd
 import numpy as np
 
 # Add parent directory to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR)
+DATA_DIR = os.path.join(BASE_DIR, "data")
 
 from utils.db_utils import db
 
@@ -20,7 +22,7 @@ def migrate_all_data():
     # 1. trains_master
     try:
         print("\nMigrating trains_master.csv...")
-        df_trains = pd.read_csv("../data/trains_master.csv")
+        df_trains = pd.read_csv(os.path.join(DATA_DIR, "trains_master.csv"))
         df_trains['Last_Maintenance_Date'] = pd.to_datetime(df_trains['Last_Maintenance_Date'])
         mapping_trains = {
             'Train_ID': 'train_id',
@@ -51,7 +53,7 @@ def migrate_all_data():
     # 2. fitness_certificates
     try:
         print("\nMigrating fitness_certificates.csv...")
-        df_certs = pd.read_csv("../data/fitness_certificates.csv")
+        df_certs = pd.read_csv(os.path.join(DATA_DIR, "fitness_certificates.csv"))
         df_certs['Valid_From'] = pd.to_datetime(df_certs['Valid_From'])
         df_certs['Valid_Until'] = pd.to_datetime(df_certs['Valid_Until'])
         mapping_certs = {
@@ -75,7 +77,7 @@ def migrate_all_data():
     # 3. maintenance_jobs
     try:
         print("\nMigrating maintenance_jobs.csv...")
-        df_jobs = pd.read_csv("../data/maintenance_jobs.csv")
+        df_jobs = pd.read_csv(os.path.join(DATA_DIR, "maintenance_jobs.csv"))
         mapping_jobs = {
             'Job_Card_ID': 'job_id',
             'Train_ID': 'train_id',
@@ -85,8 +87,11 @@ def migrate_all_data():
         }
         df_jobs = map_column_names(df_jobs, mapping_jobs)
         
-        if 'reported_date' not in df_jobs.columns:
+        if 'reported_date' in df_jobs.columns:
+            df_jobs['reported_date'] = pd.to_datetime(df_jobs['reported_date'])
+        else:
             df_jobs['reported_date'] = pd.to_datetime('today') - pd.to_timedelta(np.random.randint(1, 10, len(df_jobs)), unit='D')
+            
         if 'estimated_completion_date' not in df_jobs.columns:
             df_jobs['estimated_completion_date'] = df_jobs['reported_date'] + pd.to_timedelta(2, unit='D')
         if 'actual_completion_date' not in df_jobs.columns:
@@ -106,7 +111,7 @@ def migrate_all_data():
     # 4. historical_operations
     try:
         print("\nMigrating historical_operations.csv...")
-        df_ops = pd.read_csv("../data/historical_operations.csv")
+        df_ops = pd.read_csv(os.path.join(DATA_DIR, "historical_operations.csv"))
         df_ops['Date'] = pd.to_datetime(df_ops['Date'])
         mapping_ops = {
             'Date': 'operation_date',
