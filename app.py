@@ -17,8 +17,14 @@ except:
     pass
 
 # ── Auth guard ────────────────────────────────────────────────────────────────
-if 'user' not in st.session_state:
-    st.switch_page("pages/00_🔐_Login.py")
+# Check if user is logged in via session state
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated or 'user' not in st.session_state:
+    # Show login redirect message instead of switch_page
+    st.info("Please navigate to the Login page to continue.")
+    st.stop()
 
 user = st.session_state['user']
 
