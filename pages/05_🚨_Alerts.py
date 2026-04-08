@@ -128,7 +128,7 @@ def scan_for_alerts():
 
         # Synchronize with Database to avoid endless duplicates
         db_alerts_now = get_active_alerts()
-        existing_descs = db_alerts_now['description'].tolist() if not db_alerts_now.empty else []
+        existing_descs = db_alerts_now['description'].tolist() if db_alerts_now is not None and not db_alerts_now.empty else []
         
         for al in all_alerts:
             if al['Description'] not in existing_descs:
@@ -136,10 +136,10 @@ def scan_for_alerts():
 
         # Now pull active state from DB
         db_alerts = get_active_alerts()
-        if db_alerts.empty and all_alerts:
+        if (db_alerts is None or db_alerts.empty) and all_alerts:
             # Fallback to local memory map when DB unassigned
             db_alerts = pd.DataFrame(all_alerts)
-        elif not db_alerts.empty:
+        elif db_alerts is not None and not db_alerts.empty:
             mapping = {'severity': 'Severity', 'category': 'Category', 'train_id': 'Train_ID', 'description': 'Description', 'id': 'Alert_ID'}
             db_alerts = db_alerts.rename(columns=mapping)
 
@@ -151,7 +151,7 @@ def scan_for_alerts():
 # Execute Scan
 alert_data, trains_df, schedule_df = scan_for_alerts()
 
-if alert_data.empty:
+if alert_data is None or alert_data.empty:
     st.success("✅ System check complete. No active health alerts found.")
 else:
     # --- METRICS BAR ---
@@ -174,7 +174,7 @@ else:
     with t1:
         st.subheader("Massive Action Required")
         crit_alerts = alert_data[alert_data['Severity'] == 'CRITICAL']
-        if not crit_alerts.empty:
+        if crit_alerts is not None and not crit_alerts.empty:
             for cat in crit_alerts['Category'].unique():
                 with st.expander(f"❌ {cat}", expanded=True):
                     st.dataframe(crit_alerts[crit_alerts['Category'] == cat], use_container_width=True)
@@ -186,7 +186,7 @@ else:
     with t2:
         st.subheader("Operational Warnings")
         warn_alerts = alert_data[alert_data['Severity'] == 'WARNING']
-        if not warn_alerts.empty:
+        if warn_alerts is not None and not warn_alerts.empty:
             for cat in warn_alerts['Category'].unique():
                 with st.expander(f"⚠️ {cat}"):
                     st.table(warn_alerts[warn_alerts['Category'] == cat])
@@ -196,7 +196,7 @@ else:
     with t3:
         st.subheader("System Awareness")
         inf_alerts = alert_data[alert_data['Severity'] == 'INFO']
-        if not inf_alerts.empty:
+        if inf_alerts is not None and not inf_alerts.empty:
             st.dataframe(inf_alerts, use_container_width=True)
         else:
             st.info("No informational alerts.")
@@ -215,7 +215,7 @@ else:
         
         st.dataframe(filtered_log, use_container_width=True)
         
-        if 'Alert_ID' in filtered_log.columns and not filtered_log.empty:
+        if 'Alert_ID' in filtered_log.columns and filtered_log is not None and not filtered_log.empty:
             st.divider()
             st.subheader("✓ Acknowledge Alerts")
             ack_id = st.selectbox("Select Alert ID to Mark as Resolved", filtered_log['Alert_ID'].tolist())
@@ -261,7 +261,7 @@ with col_ins1:
 
 with col_ins2:
     st.warning("**Resource Allocation:** Fleet utilization is peaking. Consider moving 2 standby trains to active service on the Red Line.")
-    if not alert_data.empty and crit_count > 0:
+    if alert_data is not None and not alert_data.empty and crit_count > 0:
         st.error(f"**Safety Alert:** {crit_count} trains currently bypass safety thresholds. Operations must ground these units before 12:00 PM.")
 
 # Auto-refresh logic (sidebar)

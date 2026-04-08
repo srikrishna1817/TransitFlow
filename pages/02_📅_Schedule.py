@@ -24,6 +24,78 @@ apply_theme()
 register_shortcuts()
 breadcrumb(["TransitFlow Home", "Operations", "Schedule Strategy Viewer"])
 
+if st.button("🔄 Refresh Data"):
+    st.cache_data.clear()
+    st.rerun()
+
+# --- CACHED WRAPPER FUNCTIONS ---
+
+@st.cache_data(ttl=300) # cached
+def get_cached_gantt_data(schedule_df, base_date, gantt_filter):
+    gantt_data = []
+    for _, row in schedule_df.iterrows():
+        t_id = row['Train_ID']
+        assign = row['Assignment']
+        risk = row['AI_Risk_Percent']
+        
+        if assign not in gantt_filter:
+            continue
+            
+        if assign == 'SERVICE':
+            # Morning Peak Shift
+            gantt_data.append(dict(Task=t_id, Start=f"{base_date} 06:00:00", Finish=f"{base_date} 10:00:00", 
+                                   Assignment="SERVICE", Details=f"Morning Peak | Route: {row['Route']} | Risk: {risk}%"))
+            # Midday Shift
+            gantt_data.append(dict(Task=t_id, Start=f"{base_date} 11:30:00", Finish=f"{base_date} 15:30:00", 
+                                   Assignment="SERVICE", Details=f"Midday Shift | Route: {row['Route']} | Risk: {risk}%"))
+            # Evening Peak Shift
+            gantt_data.append(dict(Task=t_id, Start=f"{base_date} 17:00:00", Finish=f"{base_date} 21:00:00", 
+                                   Assignment="SERVICE", Details=f"Evening Peak | Route: {row['Route']} | Risk: {risk}%"))
+        elif assign == 'STANDBY':
+            gantt_data.append(dict(Task=t_id, Start=f"{base_date} 06:00:00", Finish=f"{base_date} 21:00:00", 
+                                   Assignment="STANDBY", Details=f"Ready Backup | Risk: {risk}%"))
+        elif assign == 'MAINTENANCE':
+            gantt_data.append(dict(Task=t_id, Start=f"{base_date} 00:00:00", Finish=f"{base_date} 23:59:00", 
+                                   Assignment="MAINTENANCE", Details=f"Status: {row['Status']} | Risk: {risk}%"))
+    
+    if gantt_data:
+        df_gantt = pd.DataFrame(gantt_data)
+        df_gantt["Start"] = pd.to_datetime(df_gantt["Start"])
+        df_gantt["Finish"] = pd.to_datetime(df_gantt["Finish"])
+        return df_gantt
+    return None
+
+@st.cache_data(ttl=60) # cached
+def get_cached_route_capacity(r_name, count):
+    return calculate_route_capacity(r_name, count)
+
+@st.cache_data(ttl=600) # cached
+def perform_route_optimization(schedule_df, target_date_str):
+    return assign_trains_to_routes(schedule_df, target_date_str), datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+@st.cache_data(ttl=300) # cached
+def perform_route_distribution(opt_routes):
+    return optimize_route_distribution(opt_routes)
+
+@st.cache_data(ttl=600) # cached
+def perform_crew_scheduling(optimized_routes, target_date_str):
+    return assign_crew_to_trains(optimized_routes, target_date_str), datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+@st.cache_data(ttl=600) # cached
+def perform_weekly_schedule(target_date):
+    return generate_weekly_schedule(target_date), datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+@st.cache_data(ttl=60) # cached
+def perform_scenario_analysis(scenario, schedule_df):
+    if scenario == "Train Breakdown on Red Line":
+        return simulate_train_breakdown("TRN_001", "Ameerpet", "08:15", 2, schedule_df), datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    elif scenario == "Ameerpet Interchange Disruption":
+        return analyze_interchange_disruption("Ameerpet", 45), datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    elif scenario == "Tech Hub Rush (Blue Line Surge)":
+        return optimize_for_event("IT Park Evac", "Hitec City", "Today", 60, "Blue Line"), datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return None, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
 st.title("📅 Daily Schedule Planning & Analytics")
 
 # ===== SIDEBAR CONTROLS =====
@@ -57,6 +129,7 @@ if st.button("🚀 Generate Schedule & Analytics", type="primary"):
     progress_bar.progress(70, text="Balancing standby reserves across network nodes...")
     
     try:
+        # DB write occurs here, so we do not cache this function call
         schedule_df, alerts = generate_schedule(required_service_trains=required_trains, save_to_db=True)
         progress_bar.progress(100, text="Schedule Generated Successfully!")
         time.sleep(0.2)
@@ -139,7 +212,6 @@ if 'generated_schedule_df' in st.session_state:
         with tab_gantt:
             st.subheader("24-Hour Train Assignment Timeline")
             
-            gantt_data = []
             base_date = target_date.strftime('%Y-%m-%d')
             
             # Sub-filter by assignment
@@ -150,36 +222,9 @@ if 'generated_schedule_df' in st.session_state:
                 key="gantt_filter"
             )
             
-            for _, row in schedule_df.iterrows():
-                t_id = row['Train_ID']
-                assign = row['Assignment']
-                risk = row['AI_Risk_Percent']
-                
-                if assign not in gantt_filter:
-                    continue
-                    
-                if assign == 'SERVICE':
-                    # Morning Peak Shift
-                    gantt_data.append(dict(Task=t_id, Start=f"{base_date} 06:00:00", Finish=f"{base_date} 10:00:00", 
-                                           Assignment="SERVICE", Details=f"Morning Peak | Route: {row['Route']} | Risk: {risk}%"))
-                    # Midday Shift
-                    gantt_data.append(dict(Task=t_id, Start=f"{base_date} 11:30:00", Finish=f"{base_date} 15:30:00", 
-                                           Assignment="SERVICE", Details=f"Midday Shift | Route: {row['Route']} | Risk: {risk}%"))
-                    # Evening Peak Shift
-                    gantt_data.append(dict(Task=t_id, Start=f"{base_date} 17:00:00", Finish=f"{base_date} 21:00:00", 
-                                           Assignment="SERVICE", Details=f"Evening Peak | Route: {row['Route']} | Risk: {risk}%"))
-                elif assign == 'STANDBY':
-                    gantt_data.append(dict(Task=t_id, Start=f"{base_date} 06:00:00", Finish=f"{base_date} 21:00:00", 
-                                           Assignment="STANDBY", Details=f"Ready Backup | Risk: {risk}%"))
-                elif assign == 'MAINTENANCE':
-                    gantt_data.append(dict(Task=t_id, Start=f"{base_date} 00:00:00", Finish=f"{base_date} 23:59:00", 
-                                           Assignment="MAINTENANCE", Details=f"Status: {row['Status']} | Risk: {risk}%"))
+            df_gantt = get_cached_gantt_data(schedule_df, base_date, tuple(gantt_filter))
             
-            if gantt_data:
-                df_gantt = pd.DataFrame(gantt_data)
-                df_gantt["Start"] = pd.to_datetime(df_gantt["Start"])
-                df_gantt["Finish"] = pd.to_datetime(df_gantt["Finish"])
-                
+            if df_gantt is not None and not df_gantt.empty:
                 color_map = {"SERVICE": "#2ca02c", "STANDBY": "#1f77b4", "MAINTENANCE": "#d62728"}
                 
                 fig_gantt = px.timeline(
@@ -339,11 +384,15 @@ if 'generated_schedule_df' in st.session_state:
             st.subheader("🚇 Intelligent Route Balancing (HMRL Specifications)")
             st.info("Algorithms natively analyze Hyderabad's Red (Miyapur ↔ LB Nagar), Green (JBS ↔ MGBS), and Blue (Nagole ↔ Raidurg) lines.")
             
-            optimized_routes = assign_trains_to_routes(schedule_df, target_date.strftime("%Y-%m-%d"))
+            with st.spinner("Generating schedule..."):
+                optimized_routes, opt_time = perform_route_optimization(schedule_df, target_date.strftime("%Y-%m-%d"))
+            st.caption(f"Data last cached: {opt_time}")
+            
             st.dataframe(optimized_routes[['train_id', 'assigned_route', 'route_priority', 'home_depot', 'assignment_reason']], use_container_width=True)
             
             if st.button("Optimize Route Distribution"):
-                _, recs = optimize_route_distribution(optimized_routes)
+                with st.spinner("Optimizing route distribution..."):
+                    _, recs = perform_route_distribution(optimized_routes)
                 for r in recs:
                     if "DEFICIT" in r:
                         st.error(r)
@@ -357,9 +406,9 @@ if 'generated_schedule_df' in st.session_state:
             avail_green = len(optimized_routes[optimized_routes['assigned_route'] == 'Green Line'])
             avail_blue = len(optimized_routes[optimized_routes['assigned_route'] == 'Blue Line'])
             
-            pct_r, def_r = calculate_route_capacity("Red Line", avail_red)
-            pct_g, def_g = calculate_route_capacity("Green Line", avail_green)
-            pct_b, def_b = calculate_route_capacity("Blue Line", avail_blue)
+            pct_r, def_r = get_cached_route_capacity("Red Line", avail_red)
+            pct_g, def_g = get_cached_route_capacity("Green Line", avail_green)
+            pct_b, def_b = get_cached_route_capacity("Blue Line", avail_blue)
             
             c1.metric("🔴 Red", f"{pct_r}%", delta=f"{def_r} Trains vs Ideal")
             c2.metric("🟢 Green", f"{pct_g}%", delta=f"{def_g} Trains vs Ideal")
@@ -371,14 +420,16 @@ if 'generated_schedule_df' in st.session_state:
             st.info("Strictly monitors Indian Labor Law bounds: 8 hr limits & localized routing certifications.")
             
             if st.button("Generate Crew Schedule For Today"):
-                with st.spinner("Assigning HMRL drivers..."):
-                    crew_df = assign_crew_to_trains(optimized_routes, target_date.strftime("%Y-%m-%d"))
-                    mc1, mc2, mc3 = st.columns(3)
-                    mc1.metric("Total Duty Shifts Generated", len(crew_df))
-                    mc2.metric("Active Drivers Placed", len(crew_df['driver_id'].unique()))
-                    mc3.metric("Legal Compliance", "100%")
-                    
-                    st.dataframe(crew_df[['train_id', 'route', 'shift_start', 'shift_end', 'driver_id', 'driver_name', 'conductor_id', 'home_depot']], use_container_width=True)
+                with st.spinner("Generating schedule..."):
+                    crew_df, crew_time = perform_crew_scheduling(optimized_routes, target_date.strftime("%Y-%m-%d"))
+                st.caption(f"Data last cached: {crew_time}")
+                
+                mc1, mc2, mc3 = st.columns(3)
+                mc1.metric("Total Duty Shifts Generated", len(crew_df))
+                mc2.metric("Active Drivers Placed", len(crew_df['driver_id'].unique()))
+                mc3.metric("Legal Compliance", "100%")
+                
+                st.dataframe(crew_df[['train_id', 'route', 'shift_start', 'shift_end', 'driver_id', 'driver_name', 'conductor_id', 'home_depot']], use_container_width=True)
 
         # ===== TAB 6: WHAT-IF SCENARIOS =====
         with tab6:
@@ -392,18 +443,21 @@ if 'generated_schedule_df' in st.session_state:
             
             if st.button("Run Simulation"):
                 with st.spinner("Calculating passenger impact and mitigation paths..."):
+                    result_data, sim_time = perform_scenario_analysis(scenario, schedule_df)
+                    st.caption(f"Simulation last cached: {sim_time}")
+                    
                     if scenario == "Train Breakdown on Red Line":
-                        imp, _ = simulate_train_breakdown("TRN_001", "Ameerpet", "08:15", 2, schedule_df)
+                        imp, _ = result_data
                         st.error(f"Critical Incident Active: {imp['Passenger Impact Severity']}")
                         for k, v in imp.items():
                             st.write(f"**{k}:** {v}")
                     elif scenario == "Ameerpet Interchange Disruption":
-                        plan, _ = analyze_interchange_disruption("Ameerpet", 45)
+                        plan, _ = result_data
                         st.warning("Platform Isolation Executed")
                         for k, v in plan.items():
                             st.write(f"**{k}:** {v}")
                     elif scenario == "Tech Hub Rush (Blue Line Surge)":
-                        surge = optimize_for_event("IT Park Evac", "Hitec City", "Today", 60, "Blue Line")
+                        surge = result_data
                         st.success("Surge Control Deployed")
                         for k, v in surge.items():
                             st.write(f"**{k}:** {v}")
@@ -416,7 +470,10 @@ if 'generated_schedule_df' in st.session_state:
             lookahead = st.slider("Forecast Range (Days)", 7, 30, 7)
             
             if st.button("Generate Rolling Forecast"):
-                 sched = generate_weekly_schedule(target_date)
+                 with st.spinner("Generating schedule..."):
+                     sched, week_time = perform_weekly_schedule(target_date)
+                 st.caption(f"Data last cached: {week_time}")
+                 
                  st.write("### Simulated Weekly Baseline")
                  st.dataframe(sched, use_container_width=True)
                  st.info("System has booked 1 Mega Block safely out of path for next Sunday.")

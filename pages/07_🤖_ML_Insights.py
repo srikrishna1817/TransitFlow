@@ -211,8 +211,12 @@ with tab3:
 
     # Deployment history
     trainer = get_model_trainer()
-    history = trainer.get_deployment_history()
-    if not history.empty:
+    try:
+        history = trainer.get_deployment_history()
+    except Exception:
+        history = pd.DataFrame()
+        
+    if history is not None and not history.empty:
         st.subheader("Model Version History")
         st.dataframe(history, use_container_width=True)
 
@@ -275,9 +279,12 @@ with tab5:
     svc = get_prediction_service()
     svc._ensure_ready()
     explainer = get_model_explainer()
-    importance_df = explainer.get_global_importance()
+    try:
+        importance_df = explainer.get_global_importance()
+    except Exception:
+        importance_df = pd.DataFrame()
 
-    if not importance_df.empty:
+    if importance_df is not None and not importance_df.empty:
         top10 = importance_df.head(10)
         fig_imp = px.bar(
             top10, x='importance', y='feature', orientation='h',
@@ -367,7 +374,7 @@ if ga_ready:
             with rc2:
                 st.markdown("#### 🚉 Route Optimizer (Maximization)")
                 best_assignments = route_stats.get('best_assignments', pd.DataFrame())
-                num_routes_opt = len(best_assignments['assigned_route'].unique()) if isinstance(best_assignments, pd.DataFrame) and not best_assignments.empty else 0
+                num_routes_opt = len(best_assignments['assigned_route'].unique()) if isinstance(best_assignments, pd.DataFrame) and best_assignments is not None and not best_assignments.empty else 0
                 st.metric("Generations Taken", route_stats.get('generations_taken', 0))
                 st.metric("Best Fitness Score", f"{route_stats.get('fitness_score', 0):.1f}")
                 st.metric("Routes Optimized", num_routes_opt)
@@ -421,7 +428,7 @@ if ga_ready:
             
             # --- 3. Route Assignment Bar Chart ---
             st.subheader("Dynamic Route Assignments")
-            if isinstance(best_assignments, pd.DataFrame) and not best_assignments.empty:
+            if isinstance(best_assignments, pd.DataFrame) and best_assignments is not None and not best_assignments.empty:
                 route_counts = best_assignments['assigned_route'].value_counts().reset_index()
                 route_counts.columns = ['Route', 'Assigned Trains']
                 
