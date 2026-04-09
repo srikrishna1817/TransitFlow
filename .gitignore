@@ -35,3 +35,10 @@ Thumbs.db
 
 # Log files
 *.log
+
+# Redundant Setup and Test files (Not needed on deployed build)
+scripts/
+tests/
+docs/
+*.sql
+README_MYSQL.md
