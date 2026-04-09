@@ -79,7 +79,11 @@ def perform_route_distribution(opt_routes):
 
 @st.cache_data(ttl=600) # cached
 def perform_crew_scheduling(optimized_routes, target_date_str):
-    return assign_crew_to_trains(optimized_routes, target_date_str), datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        result = assign_crew_to_trains(optimized_routes, target_date_str)
+        return result, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return None, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 @st.cache_data(ttl=600) # cached
 def perform_weekly_schedule(target_date):
@@ -420,18 +424,22 @@ if 'generated_schedule_df' in st.session_state:
                     else:
                         st.info(r)
                         
-            c1, c2, c3 = st.columns(3)
-            avail_red = len(optimized_routes[optimized_routes['assigned_route'] == 'Red Line'])
-            avail_green = len(optimized_routes[optimized_routes['assigned_route'] == 'Green Line'])
-            avail_blue = len(optimized_routes[optimized_routes['assigned_route'] == 'Blue Line'])
-            
-            pct_r, def_r = get_cached_route_capacity("Red Line", avail_red)
-            pct_g, def_g = get_cached_route_capacity("Green Line", avail_green)
-            pct_b, def_b = get_cached_route_capacity("Blue Line", avail_blue)
-            
-            c1.metric("🔴 Red", f"{pct_r}%", delta=f"{def_r} Trains vs Ideal")
-            c2.metric("🟢 Green", f"{pct_g}%", delta=f"{def_g} Trains vs Ideal")
-            c3.metric("🔵 Blue", f"{pct_b}%", delta=f"{def_b} Trains vs Ideal")
+            # Guard: optimized_routes must be a valid non-empty DataFrame
+            if optimized_routes is None or not isinstance(optimized_routes, pd.DataFrame) or optimized_routes.empty:
+                st.warning("Route optimization data unavailable. Please regenerate the schedule.")
+            else:
+                c1, c2, c3 = st.columns(3)
+                avail_red   = len(optimized_routes[optimized_routes['assigned_route'] == 'Red Line'])
+                avail_green = len(optimized_routes[optimized_routes['assigned_route'] == 'Green Line'])
+                avail_blue  = len(optimized_routes[optimized_routes['assigned_route'] == 'Blue Line'])
+                
+                pct_r, def_r = get_cached_route_capacity("Red Line", avail_red)
+                pct_g, def_g = get_cached_route_capacity("Green Line", avail_green)
+                pct_b, def_b = get_cached_route_capacity("Blue Line", avail_blue)
+                
+                c1.metric("🔴 Red", f"{pct_r}%", delta=f"{def_r} Trains vs Ideal")
+                c2.metric("🟢 Green", f"{pct_g}%", delta=f"{def_g} Trains vs Ideal")
+                c3.metric("🔵 Blue", f"{pct_b}%", delta=f"{def_b} Trains vs Ideal")
             
         # ===== TAB 5: CREW SCHEDULING =====
         with tab5:
@@ -443,12 +451,15 @@ if 'generated_schedule_df' in st.session_state:
                     crew_df, crew_time = perform_crew_scheduling(optimized_routes, target_date.strftime("%Y-%m-%d"))
                 st.caption(f"Data last cached: {crew_time}")
                 
-                mc1, mc2, mc3 = st.columns(3)
-                mc1.metric("Total Duty Shifts Generated", len(crew_df))
-                mc2.metric("Active Drivers Placed", len(crew_df['driver_id'].unique()))
-                mc3.metric("Legal Compliance", "100%")
-                
-                st.dataframe(crew_df[['train_id', 'route', 'shift_start', 'shift_end', 'driver_id', 'driver_name', 'conductor_id', 'home_depot']], use_container_width=True)
+                # Guard: crew_df must be a valid non-empty DataFrame
+                if crew_df is None or not isinstance(crew_df, pd.DataFrame) or crew_df.empty:
+                    st.warning("Crew scheduling unavailable. The crew roster DB may be empty — using fallback dummy pool next time.")
+                else:
+                    mc1, mc2, mc3 = st.columns(3)
+                    mc1.metric("Total Duty Shifts Generated", len(crew_df))
+                    mc2.metric("Active Drivers Placed", len(crew_df['driver_id'].unique()))
+                    mc3.metric("Legal Compliance", "100%")
+                    st.dataframe(crew_df[['train_id', 'route', 'shift_start', 'shift_end', 'driver_id', 'driver_name', 'conductor_id', 'home_depot']], use_container_width=True)
 
         # ===== TAB 6: WHAT-IF SCENARIOS =====
         with tab6:

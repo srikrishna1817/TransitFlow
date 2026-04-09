@@ -209,14 +209,23 @@ def assign_crew_to_trains(schedule_df, date):
     try:
         crew_roster = db.fetch_dataframe("SELECT * FROM crew_roster WHERE current_status = 'Available'")
     except Exception:
-        crew_roster = pd.DataFrame()
+        crew_roster = None
+
+    # Normalize DB result — could be None, list, or raw cursor rows
+    if crew_roster is None:
+        pass  # handled by the guard below
+    elif not isinstance(crew_roster, pd.DataFrame):
+        try:
+            crew_roster = pd.DataFrame(crew_roster)
+        except Exception:
+            crew_roster = None
         
     shifts = [
         ("06:00:00", "14:00:00", "Morning Shift"),
         ("14:00:00", "22:00:00", "Afternoon Shift")
     ]
     
-    if crew_roster is None or crew_roster.empty:
+    if crew_roster is None or not isinstance(crew_roster, pd.DataFrame) or crew_roster.empty:
         # Generate dummy fallback crew pool
         num_drivers, num_conductors = 20, 20
         drivers = [{'crew_id': f"DRV_{i}", 'name': f"Driver {i}", 'experience_years': np.random.randint(2, 12), 'home_depot': 'Miyapur'} for i in range(1, num_drivers + 1)]
