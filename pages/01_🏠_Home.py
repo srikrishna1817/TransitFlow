@@ -64,10 +64,10 @@ else:
     colA, colB, colC = st.columns([1, 1, 1])
     with colA:
         st.subheader("⚡ Quick Actions")
-        if st.button("📅 Generate Today's Schedule", use_container_width=True, type="primary"):
+        if st.button(\"📅 Generate Today's Schedule\", use_container_width=True, type=\"primary\"):
             st.switch_page("pages/02_📅_Schedule.py")
         if st.button("🚨 View Critical Alerts", use_container_width=True):
-            st.switch_page("pages/05_🚨_Alerts.py")
+            st.switch_page("pages/04_🚨_Alerts.py")
             
     with colB:
         st.subheader("🔧 Open High-Priority Jobs")
