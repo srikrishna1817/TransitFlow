@@ -22,8 +22,21 @@ if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
 if not st.session_state.authenticated or 'user' not in st.session_state:
-    # Show login redirect message instead of switch_page
-    st.info("Please navigate to the Login page to continue.")
+    st.markdown("<h1 style='text-align: center; color: #0066CC;'>🚆 Welcome to TransitFlow</h1>", unsafe_allow_html=True)
+    st.markdown("<h4 style='text-align: center; color: #888;'>AI-Powered Fleet Intelligence & Scheduling System for HMRL</h4>", unsafe_allow_html=True)
+    
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.info("👋 **Hello!** You are currently viewing the guest portal. Please log in to securely access the full operational dashboard, fleet metrics, and advanced scheduling AI.")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("🔐 Proceed to Secure Login", type="primary", use_container_width=True):
+            st.switch_page("pages/00_🔐_Login.py")
+            
+        st.markdown("<br><br><p style='text-align: center; font-size: 0.8em; color: #666;'>TransitFlow v1.1 | Authorized Personnel Only</p>", unsafe_allow_html=True)
+        
     st.stop()
 
 user = st.session_state['user']
