@@ -179,10 +179,26 @@ if 'generated_schedule_df' in st.session_state:
     route_caps = {'Red Line': 25, 'Blue Line': 23, 'Green Line': 12}
     
     if True: # Preserve indentation
-        # Metrics
-        service_count = len(schedule_df[schedule_df["Assignment"] == "SERVICE"])
-        standby_count = len(schedule_df[schedule_df["Assignment"] == "STANDBY"])
-        maintenance_count = len(schedule_df[schedule_df["Assignment"] == "MAINTENANCE"])
+        # BUG 2 FIX: Compute KPIs from DB ground truth, not GA in-memory output
+        try:
+            from utils.db_utils import db
+            today_str = datetime.date.today().strftime('%Y-%m-%d')
+            kpi_df = db.fetch_dataframe(
+                "SELECT assignment_status, COUNT(*) as cnt FROM train_assignments "
+                "WHERE date = %s GROUP BY assignment_status", (today_str,)
+            )
+            if kpi_df is not None and not kpi_df.empty:
+                kpi_map = dict(zip(kpi_df['assignment_status'].str.upper(), kpi_df['cnt']))
+                service_count   = int(kpi_map.get('SERVICE', 0))
+                standby_count   = int(kpi_map.get('STANDBY', 0))
+                maintenance_count = int(kpi_map.get('MAINTENANCE', 0))
+            else:
+                raise ValueError("No DB rows")
+        except Exception:
+            # Fallback to in-memory schedule if DB unavailable
+            service_count     = len(schedule_df[schedule_df["Assignment"] == "SERVICE"])
+            standby_count     = len(schedule_df[schedule_df["Assignment"] == "STANDBY"])
+            maintenance_count = len(schedule_df[schedule_df["Assignment"] == "MAINTENANCE"])
 
         st.success(f"✅ Master Schedule successfully computed for {target_date_disp.strftime('%B %d, %Y')}.")
 
@@ -225,7 +241,8 @@ if 'generated_schedule_df' in st.session_state:
             df_gantt = get_cached_gantt_data(schedule_df, base_date, tuple(gantt_filter))
             
             if df_gantt is not None and not df_gantt.empty:
-                color_map = {"SERVICE": "#2ca02c", "STANDBY": "#1f77b4", "MAINTENANCE": "#d62728"}
+                # BUG 3 FIX: Explicit gold colour for STANDBY so bars always render
+                color_map = {"SERVICE": "#2ca02c", "STANDBY": "gold", "MAINTENANCE": "#d62728"}
                 
                 fig_gantt = px.timeline(
                     df_gantt, x_start="Start", x_end="Finish", y="Task", color="Assignment",
@@ -335,9 +352,11 @@ if 'generated_schedule_df' in st.session_state:
             c1.metric("Peak Hour Max Demand", max(demand_profile))
             c2.metric("Minimum Standby Buffer", min([s for s in standby_profile if s > 0] + [0]) if sum(standby_profile)>0 else 0)
             
-            is_critical = min_cov < 90
-            c3.metric("Critical Coverage Drop", f"{min_cov}%" if pd.notna(min_cov) else "N/A", 
-                      delta="Insufficient" if is_critical else "Adequate", 
+            # BUG 4 FIX: Only show Insufficient when there is an actual shortfall (coverage_drop > 0)
+            coverage_drop = max(0.0, 100.0 - min_cov) if pd.notna(min_cov) else 0.0
+            is_critical = coverage_drop > 5  # Only flag if >5% shortfall
+            c3.metric("Critical Coverage Drop", f"{coverage_drop:.1f}%" if pd.notna(min_cov) else "N/A",
+                      delta="Insufficient" if is_critical else "Sufficient",
                       delta_color="inverse" if is_critical else "normal")
 
             # Chart 1: Stacked Bar & Line

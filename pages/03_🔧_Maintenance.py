@@ -33,8 +33,11 @@ else:
         
     filtered_df = maint_df[(maint_df['Priority'].isin(pri_filter)) & (maint_df['Status'].isin(status_filter))]
     
-    total_open = len(filtered_df[filtered_df['Status'] == 'Open'])
-    high_pri_open = len(filtered_df[(filtered_df['Status'] == 'Open') & (filtered_df['Priority'] == 'High')])
+    total_open = len(filtered_df[filtered_df['Status'].isin(['Open', 'In Progress'])])
+    high_pri_open = len(filtered_df[
+        (filtered_df['Priority'] == 'High') &
+        (filtered_df['Status'].isin(['Open', 'In Progress']))
+    ])
     
     c1, c2 = st.columns(2)
     c1.metric("Total Open Jobs", total_open)

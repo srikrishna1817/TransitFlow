@@ -216,7 +216,7 @@ def assign_crew_to_trains(schedule_df, date):
         ("14:00:00", "22:00:00", "Afternoon Shift")
     ]
     
-    if crew_roster.empty:
+    if crew_roster is None or crew_roster.empty:
         # Generate dummy fallback crew pool
         num_drivers, num_conductors = 20, 20
         drivers = [{'crew_id': f"DRV_{i}", 'name': f"Driver {i}", 'experience_years': np.random.randint(2, 12), 'home_depot': 'Miyapur'} for i in range(1, num_drivers + 1)]

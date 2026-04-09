@@ -80,6 +80,15 @@ COST_RANGES = {
     'Routine':           (20_000,   60_000),
 }
 PRIORITY_MULTIPLIER = {'High': 1.5, 'Medium': 1.0, 'Low': 0.7}
+ISSUE_DESCRIPTION_MAP = {
+    'Brake System':      'Brake System Inspection Required',
+    'Electrical/Power':  'Electrical Fault Investigation',
+    'Door Mechanism':    'Door Mechanism Repair',
+    'HVAC/Climate':      'HVAC System Service',
+    'Signaling':         'Signaling Fault Diagnosis',
+    'Structural':        'Structural Integrity Check',
+    'Routine':           'Scheduled Routine Maintenance',
+}
 
 job_cards = []
 for i, train_id in enumerate(train_ids):
@@ -102,6 +111,7 @@ for i, train_id in enumerate(train_ids):
             'Status':                  status,
             'Priority':                priority,
             'Failure_Type':            failure,
+            'Issue_Description':       ISSUE_DESCRIPTION_MAP.get(failure, 'General Maintenance Required'),
             'Estimated_Hours':         random.randint(2, 24),
             'Cost_INR':                cost,
             'reported_date':           reported.strftime('%Y-%m-%d'),
