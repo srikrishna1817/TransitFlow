@@ -17,25 +17,11 @@ register_shortcuts()
 breadcrumb(["TransitFlow Home", "Executive Dashboard"])
 st.title(f"🏠 Welcome back, {user.get('username', 'User').capitalize()}!")
 st.caption(f"Last interactive session: {datetime.datetime.now().strftime('%d %B %Y, %I:%M %p')}  |  🟢 Systems Operational")
-try:
-    from utils.data_loader import load_trains_data, load_maintenance_jobs, load_certificates_data
-    trains_df = load_trains_data()
-    maint_df = load_maintenance_jobs()
-    cert_df = load_certificates_data()
-except Exception as e:
-    # Original fallback
-    # @st.cache_data
-    # def load_data():
-    #     try:
-    #         trains_df = pd.read_csv("data/trains_master.csv")
-    #         maint_df = pd.read_csv("data/maintenance_jobs.csv")
-    #         cert_df = pd.read_csv("data/fitness_certificates.csv")
-    #         return trains_df, maint_df, cert_df
-    #     except Exception as e:
-    #         return None, None, None
-    trains_df = pd.read_csv("data/trains_master.csv")
-    maint_df = pd.read_csv("data/maintenance_jobs.csv")
-    cert_df = pd.read_csv("data/fitness_certificates.csv")
+
+from utils.data_loader import load_trains_data, load_maintenance_jobs, load_certificates_data
+trains_df = load_trains_data()
+maint_df = load_maintenance_jobs()
+cert_df = load_certificates_data()
 
 if trains_df is None:
     st.error("Error loading data files. Please check the data/ directory.")
@@ -51,13 +37,13 @@ else:
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        metric_card("Total Fleet Size", str(total_fleet), "+0", "#0066CC")
+        metric_card("Total Fleet Size", str(total_fleet), None, "#0066CC")
     with col2:
-        metric_card("Trains in Service", str(in_service), "+2", "#00CC66")
+        metric_card("Trains in Service", str(in_service), None, "#00CC66")
     with col3:
-        metric_card("Trains in Maintenance", str(in_maint), "-1", "#FF6B35")
+        metric_card("Trains in Maintenance", str(in_maint), None, "#FF6B35")
     with col4:
-        metric_card("Avg Fleet Health", f"{health_score:.1f}%", "+0.2%", "#00CC66" if health_score >= 80 else "#FF6B35")
+        metric_card("Avg Fleet Health", f"{health_score:.1f}%", None, "#00CC66" if health_score >= 80 else "#FF6B35")
 
     st.divider()
     
@@ -94,8 +80,3 @@ else:
             st.warning(f"⚠️ Certificates Expiring in ≤ 15 Days: {expiring_soon}")
         else:
             st.success("All Fleet certifications are up to date.")
-
-    st.divider()
-    
-    st.markdown("### 📢 What's New inside TransitFlow v1.1")
-    st.info("• Automated Data Quality Scanning\n• Machine Learning Heatmap Simulations\n• Advanced HMRL Branding Subsystem\n• Keyboard Actions (Ctrl+S / Generate)")

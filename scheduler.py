@@ -1,4 +1,5 @@
 # scheduler.py
+import streamlit as st
 
 import pandas as pd
 import numpy as np
@@ -6,13 +7,31 @@ from datetime import datetime
 from datetime import datetime
 
 
+@st.cache_data(ttl=600)
 def generate_schedule(required_service_trains=45, save_to_db=False):
     """
     Generate optimized train schedule.
     Returns:
         schedule_df (DataFrame)
-        alerts (list of strings)
+         alerts (list of strings)
     """
+    if not save_to_db:
+        try:
+            from utils.db_utils import db
+            today = datetime.now().date()
+            # Fetch pre-compiled AI schedule from DB instantly instead of running ML models repeatedly
+            df = db.fetch_dataframe("SELECT * FROM daily_schedules WHERE schedule_date = %s", (today,))
+            if df is not None and not df.empty:
+                mapping = {
+                    'train_id': 'Train_ID', 'priority_score': 'Priority_Score',
+                    'ai_risk_percent': 'AI_Risk_Percent', 'days_since_maint': 'Days_Since_Maint',
+                    'fitness_valid': 'Fitness_Valid', 'critical_job': 'Critical_Job',
+                    'status': 'Status', 'assignment': 'Assignment', 'route': 'Route'
+                }
+                schedule_df = df.rename(columns=mapping)
+                return schedule_df, []
+        except Exception as e:
+            print("DB shortcut failed, falling back to manual generation:", e)
 
     # Load datasets
     try:

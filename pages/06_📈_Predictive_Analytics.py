@@ -70,14 +70,14 @@ with tab1:
         # Line chart for fleet health
         fig_health = px.line(
             data['health_data'], x='Date', y='Health', color='Type',
-            color_discrete_map={'Historical': '#1f77b4', 'Forecast': '#ff7f0e'},
+            color_discrete_map={'Historical': '#3B9EFF', 'Forecast': '#FB923C'},
             title="Fleet Average Health Trend"
         )
         # Adding trendline
         fig_health.add_scatter(
             x=data['health_data']['Date'],
             y=data['health_data']['Health'].rolling(window=7).mean(),
-            mode='lines', name='7-Day MA', line=dict(dash='dash', color='rgba(255,255,255,0.3)')
+            mode='lines', name='7-Day MA', line=dict(dash='dash', color='rgba(226,232,240,0.5)')
         )
         fig_health.update_layout(height=450, hovermode='x unified')
         st.plotly_chart(fig_health, use_container_width=True)
@@ -98,31 +98,6 @@ with tab1:
         st.metric("Expected Health (Next 30d)", f"{avg_fut:.1f}/100", 
                   delta=f"{avg_fut - avg_hist:+.1f}", delta_color="normal" if avg_fut > avg_hist else "inverse")
 
-    # Stacked Area (Mocking Category distribution for visual richness)
-    st.markdown("### Fleet Composition by Health Category")
-    dates = data['health_data']['Date'].unique()
-    np.random.seed(10)
-    # Generate realistic shifting proportions around the average line
-    excellent = np.clip(np.random.normal(30, 5, len(dates)) + (data['health_data']['Health'].values - 70), 5, 60)
-    good = np.clip(np.random.normal(40, 5, len(dates)), 10, 60)
-    fair = np.clip(np.random.normal(20, 3, len(dates)) - (data['health_data']['Health'].values - 70)*0.5, 5, 40)
-    poor = 100 - (excellent + good + fair)
-    
-    comp_df = pd.DataFrame({
-        'Date': np.repeat(dates, 4),
-        'Category': ['Excellent (>90)']*len(dates) + ['Good (70-90)']*len(dates) + ['Fair (50-70)']*len(dates) + ['Poor (<50)']*len(dates),
-        'Percentage': np.concatenate([excellent, good, fair, poor])
-    })
-    
-    fig_area = px.area(
-        comp_df, x='Date', y='Percentage', color='Category',
-        color_discrete_map={
-            'Excellent (>90)': '#2ca02c', 'Good (70-90)': '#1f77b4', 
-            'Fair (50-70)': '#ff7f0e', 'Poor (<50)': '#d62728'
-        }
-    )
-    fig_area.update_layout(height=400)
-    st.plotly_chart(fig_area, use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 2: MAINTENANCE FORECAST
@@ -212,7 +187,7 @@ with tab3:
             st.markdown("#### Historical vs Predicted Costs (Monthly)")
             fig_cost = px.bar(
                 data['monthly'], x='Date', y='Cost', color='Type', barmode='group',
-                color_discrete_map={'Actual': '#2ca02c', 'Predicted': '#d62728'},
+                color_discrete_map={'Actual': '#34D399', 'Predicted': '#F87171'},
                 text_auto='.2s'
             )
             st.plotly_chart(fig_cost, use_container_width=True)

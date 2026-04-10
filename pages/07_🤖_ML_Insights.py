@@ -34,22 +34,28 @@ def get_model_explainer():
     return ModelExplainer(svc._predictor)
 
 # ── Risk colour helper ─────────────────────────────────────────────────────────
-RISK_COLORS = {'CRITICAL': '#d62728', 'HIGH': '#ff7f0e', 'MEDIUM': '#ffdd57', 'LOW': '#2ca02c'}
-RISK_BG     = {'CRITICAL': '#ffd6d6', 'HIGH': '#ffe6cc', 'MEDIUM': '#fffacc', 'LOW': '#d6ffda'}
+# Dark-mode safe risk palette
+RISK_COLORS = {'CRITICAL': '#F87171', 'HIGH': '#FB923C', 'MEDIUM': '#FBBF24', 'LOW': '#34D399'}
+RISK_BG     = {'CRITICAL': 'rgba(248,113,113,0.18)', 'HIGH': 'rgba(251,146,60,0.18)', 'MEDIUM': 'rgba(251,191,36,0.15)', 'LOW': 'rgba(52,211,153,0.15)'}
+RISK_BORDER = {'CRITICAL': 'rgba(248,113,113,0.5)',  'HIGH': 'rgba(251,146,60,0.5)',  'MEDIUM': 'rgba(251,191,36,0.4)',  'LOW': 'rgba(52,211,153,0.4)'}
 
 def risk_badge(risk):
-    c = RISK_COLORS.get(risk, '#888')
-    return f'<span style="background:{c};color:white;padding:2px 10px;border-radius:12px;font-weight:bold">{risk}</span>'
+    c  = RISK_COLORS.get(risk, '#94A3B8')
+    bg = RISK_BG.get(risk, 'rgba(148,163,184,0.15)')
+    bd = RISK_BORDER.get(risk, 'rgba(148,163,184,0.4)')
+    return (f'<span style="background:{bg};color:{c};padding:3px 12px;border-radius:20px;'
+            f'font-weight:700;font-size:0.78rem;letter-spacing:0.6px;text-transform:uppercase;'
+            f'border:1px solid {bd};">{risk}</span>')
 
 # ─────────────────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🔮 Fleet Predictions",
     "🔍 Individual Train Analysis",
     "📊 Model Performance",
     "🔄 Model Retraining",
     "📈 Feature Importance",
+    "🧬 GA Performance",
 ])
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 1 — FLEET PREDICTIONS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -77,30 +83,21 @@ with tab1:
 
         # Colour-coded table
         def style_risk(val):
-            c = RISK_COLORS.get(val, '#ccc')
-            return f'background-color:{RISK_BG.get(val,"#fff")};color:{c};font-weight:bold'
+            c  = RISK_COLORS.get(val, '#94A3B8')
+            bg = RISK_BG.get(val, 'rgba(148,163,184,0.1)')
+            return f'background-color:{bg};color:{c};font-weight:700;border-radius:4px;'
 
         styled = df.style.applymap(style_risk, subset=['risk_level'])
         st.dataframe(styled, use_container_width=True)
 
-        col_l, col_r = st.columns(2)
-        with col_l:
-            fig_pie = px.pie(
-                df, names='risk_level',
-                color='risk_level',
-                color_discrete_map=RISK_COLORS,
-                title="Risk Distribution Across Fleet",
-                hole=0.4,
-            )
-            st.plotly_chart(fig_pie, use_container_width=True)
-
-        with col_r:
-            ft_counts = df['failure_type'].value_counts().reset_index()
-            ft_counts.columns = ['Failure Type', 'Count']
-            fig_ft = px.bar(ft_counts, x='Failure Type', y='Count',
-                            color='Count', color_continuous_scale='Reds',
-                            title="Predicted Failure Type Breakdown")
-            st.plotly_chart(fig_ft, use_container_width=True)
+        fig_pie = px.pie(
+            df, names='risk_level',
+            color='risk_level',
+            color_discrete_map=RISK_COLORS,
+            title="Risk Distribution Across Fleet",
+            hole=0.4,
+        )
+        st.plotly_chart(fig_pie, use_container_width=True)
 
         # Download
         csv = df.to_csv(index=False).encode('utf-8')
@@ -142,12 +139,12 @@ with tab2:
                 'axis': {'range': [0, 100]},
                 'bar': {'color': RISK_COLORS.get(risk, '#888')},
                 'steps': [
-                    {'range': [0, 35], 'color': '#d6ffda'},
-                    {'range': [35, 55], 'color': '#fffacc'},
-                    {'range': [55, 75], 'color': '#ffe6cc'},
-                    {'range': [75, 100], 'color': '#ffd6d6'},
+                    {'range': [0, 35], 'color': 'rgba(52,211,153,0.25)'},
+                    {'range': [35, 55], 'color': 'rgba(251,191,36,0.20)'},
+                    {'range': [55, 75], 'color': 'rgba(251,146,60,0.25)'},
+                    {'range': [75, 100], 'color': 'rgba(248,113,113,0.25)'},
                 ],
-                'threshold': {'line': {'color': 'black', 'width': 3}, 'thickness': 0.8, 'value': prob},
+                'threshold': {'line': {'color': '#E2E8F0', 'width': 3}, 'thickness': 0.8, 'value': prob},
             },
         ))
         fig_gauge.update_layout(height=260, margin=dict(t=40, b=10))
@@ -177,7 +174,7 @@ with tab2:
                 x=exp_df['SHAP Impact'],
                 y=exp_df['Feature'],
                 orientation='h',
-                marker_color=['#d62728' if v > 0 else '#2ca02c' for v in exp_df['SHAP Impact']],
+                marker_color=['#F87171' if v > 0 else '#34D399' for v in exp_df['SHAP Impact']],
             ))
             fig_wf.update_layout(title="Feature Impact on Prediction (SHAP)", height=280,
                                   xaxis_title="SHAP Value", yaxis_autorange='reversed')
@@ -318,135 +315,115 @@ with tab5:
         st.info("Train the model first to see feature importance.")
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# GA INSIGHTS SECTION
+# TAB 6 — GA INSIGHTS SECTION
 # ═══════════════════════════════════════════════════════════════════════════════
-st.divider()
-st.header("🧬 Genetic Algorithm Insights")
-st.caption("Review the performance and convergence of DEAP-based evolutionary schedulers.")
-
-ga_ready = False
-try:
-    from advanced_scheduling.crew_scheduler import assign_crew_to_trains, get_ga_stats as get_crew_ga_stats
-    from advanced_scheduling.route_optimizer import assign_trains_to_routes, get_optimization_summary as get_route_ga_stats
-    ga_ready = True
-except ImportError as e:
-    st.error(f"Failed to load Genetic Algorithm modules: {e}")
-
-if ga_ready:
-    if st.button("🚀 Run GA Optimization", key="btn_run_ga"):
-        with st.spinner("Executing DEAP Genetic Algorithms for Crew and Route Optimization..."):
-            # Dummy datasets for GA triggering as required by the assignment functions
-            dummy_crew_schedule = pd.DataFrame({
-                'train_id': [f"TRN_{i}" for i in range(50)], 
-                'assigned_route': ['Red Line']*25 + ['Blue Line']*15 + ['Green Line']*10
-            })
-            dummy_available_trains = pd.DataFrame({
-                'train_id': [f"HMRL-{i:02d}" for i in range(60)], 
-                'health_score': np.random.randint(60, 100, 60), 
-                'home_depot': ['Miyapur']*20 + ['Uppal']*20 + ['Secunderabad']*20
-            })
-            
-            # Execute GAs
-            assign_crew_to_trains(dummy_crew_schedule, '2026-04-06')
-            assign_trains_to_routes(dummy_available_trains, '2026-04-06')
-            st.success("GA Optimization complete! Stats have been refreshed.")
-
-    # Fetch stats after running or initially
+with tab6:
+    st.header("🧬 Genetic Algorithm Insights")
+    st.caption("Review the performance and convergence of DEAP-based evolutionary schedulers.")
+    
+    ga_ready = False
     try:
-        crew_stats = get_crew_ga_stats()
-        route_stats = get_route_ga_stats()
-        
-        has_run = crew_stats.get('generations_run', 0) > 0 or route_stats.get('generations_taken', 0) > 0
-        
-        if not has_run:
-            st.info("Click 'Run GA Optimization' to generate and visualize the GA metrics.")
-        else:
-            # --- 2. GA Summary Cards ---
-            st.subheader("Optimization Summary Metrics")
-            rc1, rc2 = st.columns(2)
-            
-            with rc1:
-                st.markdown("#### 👷 Crew Scheduler (Minimization)")
-                st.metric("Generations Run", crew_stats.get('generations_run', 0))
-                st.metric("Best Fitness Score (Penalty)", f"{crew_stats.get('best_fitness_score', 0):.1f}")
-                st.metric("Convergence Generation", crew_stats.get('convergence_generation', 0))
+        from advanced_scheduling.crew_scheduler import assign_crew_to_trains, get_ga_stats as get_crew_ga_stats
+        from advanced_scheduling.route_optimizer import assign_trains_to_routes, get_optimization_summary as get_route_ga_stats
+        ga_ready = True
+    except ImportError as e:
+        st.error(f"Failed to load Genetic Algorithm modules: {e}")
+    
+    if ga_ready:
+        if st.button("🚀 Run GA Optimization", key="btn_run_ga"):
+            with st.spinner("Executing DEAP Genetic Algorithms for Crew and Route Optimization..."):
+                # Dummy datasets for GA triggering as required by the assignment functions
+                dummy_crew_schedule = pd.DataFrame({
+                    'train_id': [f"TRN_{i}" for i in range(50)], 
+                    'assigned_route': ['Red Line']*25 + ['Blue Line']*15 + ['Green Line']*10
+                })
+                dummy_available_trains = pd.DataFrame({
+                    'train_id': [f"HMRL-{i:02d}" for i in range(60)], 
+                    'health_score': np.random.randint(60, 100, 60), 
+                    'home_depot': ['Miyapur']*20 + ['Uppal']*20 + ['Secunderabad']*20
+                })
                 
-            with rc2:
-                st.markdown("#### 🚉 Route Optimizer (Maximization)")
-                best_assignments = route_stats.get('best_assignments', pd.DataFrame())
-                num_routes_opt = len(best_assignments['assigned_route'].unique()) if isinstance(best_assignments, pd.DataFrame) and best_assignments is not None and not best_assignments.empty else 0
-                st.metric("Generations Taken", route_stats.get('generations_taken', 0))
-                st.metric("Best Fitness Score", f"{route_stats.get('fitness_score', 0):.1f}")
-                st.metric("Routes Optimized", num_routes_opt)
-                
-            # --- 1. Fitness Convergence Chart ---
-            st.subheader("GA Convergence Over Generations")
+                # Execute GAs
+                assign_crew_to_trains(dummy_crew_schedule, '2026-04-06')
+                assign_trains_to_routes(dummy_available_trains, '2026-04-06')
+                st.success("GA Optimization complete! Stats have been refreshed.")
+    
+        # Fetch stats after running or initially
+        try:
+            crew_stats = get_crew_ga_stats()
+            route_stats = get_route_ga_stats()
             
-            # Helper to simulate the historical convergence trajectory using the result scalars
-            def simulate_convergence(gens, best_fit, conv_gen, maximize=True):
-                if gens <= 0: return []
-                curve = []
-                start_fit = best_fit * 0.3 if maximize else (best_fit * 3 if best_fit > 0 else -best_fit * 3 + 100)
-                if start_fit == 0: start_fit = -1000 if maximize else 10000
-                conv_gen = max(1, conv_gen)
-                for i in range(1, gens + 1):
-                    if i < conv_gen:
-                        # Quadratic approach towards best_fit
-                        ratio = ((conv_gen - i) / conv_gen) ** 2
-                        val = best_fit + (start_fit - best_fit) * ratio
-                    else:
-                        val = best_fit
-                    curve.append(val)
-                return curve
-                
-            crew_gens = crew_stats.get('generations_run', 0)
-            crew_best = crew_stats.get('best_fitness_score', 0)
-            crew_conv = crew_stats.get('convergence_generation', 0)
-            crew_curve = simulate_convergence(crew_gens, crew_best, crew_conv, maximize=False)
+            has_run = crew_stats.get('generations_run', 0) > 0 or route_stats.get('generations_taken', 0) > 0
             
-            route_gens = route_stats.get('generations_taken', 0)
-            route_best = route_stats.get('fitness_score', 0)
-            # Route logic stops at generations_taken without a separate convergence gen logged
-            route_curve = simulate_convergence(route_gens, route_best, max(1, route_gens - 10), maximize=True)
-            
-            # Standardize sizes for plotting together
-            max_plot_gens = max(crew_gens, route_gens, 1)
-            crew_plot = crew_curve + [crew_curve[-1]] * (max_plot_gens - len(crew_curve)) if crew_curve else [0]*max_plot_gens
-            route_plot = route_curve + [route_curve[-1]] * (max_plot_gens - len(route_curve)) if route_curve else [0]*max_plot_gens
-            
-            df_conv = pd.DataFrame({
-                'Generation': list(range(1, max_plot_gens + 1)),
-                'Crew Scheduler Fitness': crew_plot,
-                'Route Optimizer Fitness': route_plot
-            })
-            
-            fig_conv = px.line(df_conv, x='Generation', y=['Crew Scheduler Fitness', 'Route Optimizer Fitness'],
-                               title="Convergence Trace (Simulated from Result Scalars)",
-                               labels={'value': 'Best Fitness Score', 'variable': 'GA Module'},
-                               color_discrete_sequence=['#ff7f0e', '#1f77b4'])
-            st.plotly_chart(fig_conv, use_container_width=True)
-            
-            # --- 3. Route Assignment Bar Chart ---
-            st.subheader("Dynamic Route Assignments")
-            if isinstance(best_assignments, pd.DataFrame) and best_assignments is not None and not best_assignments.empty:
-                route_counts = best_assignments['assigned_route'].value_counts().reset_index()
-                route_counts.columns = ['Route', 'Assigned Trains']
-                
-                # Colors explicitly requested
-                color_map = {
-                    'Red Line': 'red',
-                    'Blue Line': 'blue',
-                    'Green Line': 'green',
-                    'Standby': 'gray'
-                }
-                
-                fig_bar = px.bar(route_counts, x='Route', y='Assigned Trains', color='Route',
-                                 title="Assigned Trains per Route (Route Optimizer GA)",
-                                 color_discrete_map=color_map)
-                st.plotly_chart(fig_bar, use_container_width=True)
+            if not has_run:
+                st.info("Click 'Run GA Optimization' to generate and visualize the GA metrics.")
             else:
-                st.warning("No route assignments available to chart.")
+                # --- 2. GA Summary Cards ---
+                st.subheader("Optimization Summary Metrics")
+                rc1, rc2 = st.columns(2)
                 
-    except Exception as e:
-        st.error(f"Error fetching or rendering GA stats: {e}")
+                with rc1:
+                    st.markdown("#### 👷 Crew Scheduler (Minimization)")
+                    st.metric("Generations Run", crew_stats.get('generations_run', 0))
+                    st.metric("Best Fitness Score (Penalty)", f"{crew_stats.get('best_fitness_score', 0):.1f}")
+                    st.metric("Convergence Generation", crew_stats.get('convergence_generation', 0))
+                    
+                with rc2:
+                    st.markdown("#### 🚉 Route Optimizer (Maximization)")
+                    best_assignments = route_stats.get('best_assignments', pd.DataFrame())
+                    num_routes_opt = len(best_assignments['assigned_route'].unique()) if isinstance(best_assignments, pd.DataFrame) and best_assignments is not None and not best_assignments.empty else 0
+                    st.metric("Generations Taken", route_stats.get('generations_taken', 0))
+                    st.metric("Best Fitness Score", f"{route_stats.get('fitness_score', 0):.1f}")
+                    st.metric("Routes Optimized", num_routes_opt)
+                    
+                # --- 1. Fitness Convergence Chart ---
+                st.subheader("GA Convergence Over Generations")
+                
+                # Helper to simulate the historical convergence trajectory using the result scalars
+                def simulate_convergence(gens, best_fit, conv_gen, maximize=True):
+                    if gens <= 0: return []
+                    curve = []
+                    start_fit = best_fit * 0.3 if maximize else (best_fit * 3 if best_fit > 0 else -best_fit * 3 + 100)
+                    if start_fit == 0: start_fit = -1000 if maximize else 10000
+                    conv_gen = max(1, conv_gen)
+                    for i in range(1, gens + 1):
+                        if i < conv_gen:
+                            # Quadratic approach towards best_fit
+                            ratio = ((conv_gen - i) / conv_gen) ** 2
+                            val = best_fit + (start_fit - best_fit) * ratio
+                        else:
+                            val = best_fit
+                        curve.append(val)
+                    return curve
+                    
+                crew_gens = crew_stats.get('generations_run', 0)
+                crew_best = crew_stats.get('best_fitness_score', 0)
+                crew_conv = crew_stats.get('convergence_generation', 0)
+                crew_curve = simulate_convergence(crew_gens, crew_best, crew_conv, maximize=False)
+                
+                route_gens = route_stats.get('generations_taken', 0)
+                route_best = route_stats.get('fitness_score', 0)
+                # Route logic stops at generations_taken without a separate convergence gen logged
+                route_curve = simulate_convergence(route_gens, route_best, max(1, route_gens - 10), maximize=True)
+                
+                # Standardize sizes for plotting together
+                max_plot_gens = max(crew_gens, route_gens, 1)
+                crew_plot = crew_curve + [crew_curve[-1]] * (max_plot_gens - len(crew_curve)) if crew_curve else [0]*max_plot_gens
+                route_plot = route_curve + [route_curve[-1]] * (max_plot_gens - len(route_curve)) if route_curve else [0]*max_plot_gens
+                
+                df_conv = pd.DataFrame({
+                    'Generation': list(range(1, max_plot_gens + 1)),
+                    'Crew Scheduler Fitness': crew_plot,
+                    'Route Optimizer Fitness': route_plot
+                })
+                
+                fig_conv = px.line(df_conv, x='Generation', y=['Crew Scheduler Fitness', 'Route Optimizer Fitness'],
+                                   title="Convergence Trace (Simulated from Result Scalars)",
+                                   labels={'value': 'Best Fitness Score', 'variable': 'GA Module'},
+                                   color_discrete_sequence=['#ff7f0e', '#1f77b4'])
+                st.plotly_chart(fig_conv, use_container_width=True)
+                
+    
+        except Exception as e:
+            st.error(f"Error fetching or rendering GA stats: {e}")
 

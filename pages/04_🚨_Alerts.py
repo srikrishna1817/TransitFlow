@@ -13,11 +13,6 @@ from auth.page_guard import require_auth
 st.set_page_config(page_title="Alerts Dashboard", page_icon="🚨", layout="wide")
 user = require_auth('Alerts')
 
-# Simulation of auto-refresh (re-runs script every 60s)
-# st.empty() 
-# if "last_refresh" not in st.session_state:
-#     st.session_state.last_refresh = datetime.datetime.now()
-
 # Header
 st.title("🚨 Real-Time Alerts & Notifications")
 curr_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -161,8 +156,8 @@ else:
     healthy_pct = int(((len(trains_df) - crit_count) / len(trains_df)) * 100)
 
     mcol1, mcol2, mcol3, mcol4 = st.columns(4)
-    mcol1.metric("🔴 Critical", crit_count, delta="-2 vs yesterday") # Mock delta
-    mcol2.metric("🟠 Warnings", warn_count, delta="+1 vs yesterday") # Mock delta
+    mcol1.metric("🔴 Critical", crit_count)
+    mcol2.metric("🟠 Warnings", warn_count)
     mcol3.metric("🟡 Informational", info_count)
     mcol4.metric("✅ Fleet Health Indicator", f"{healthy_pct}%")
 
@@ -233,40 +228,25 @@ else:
         csv = filtered_log.to_csv(index=False).encode('utf-8')
         st.download_button("📥 Export Current Alerts to CSV", csv, "active_alerts.csv", "text/csv")
 
-# --- TREND VISUALIZATION ---
+# --- TOP ACTIONABLE ALERTS (Dynamic) ---
 st.divider()
-st.subheader("📈 Alert Severity Trends (Last 30 Days)")
+st.subheader("⚡ Top Active Alerts Requiring Attention")
 
-# Generate professional dummy trend data
-dates = [datetime.date.today() - datetime.timedelta(days=x) for x in range(30)]
-dummy_trend = pd.DataFrame({
-    'Date': dates[::-1],
-    'Critical': np.random.randint(0, 5, 30),
-    'Warning': np.random.randint(2, 10, 30),
-    'Info': np.random.randint(5, 15, 30)
-})
-fig_trend = px.line(dummy_trend, x='Date', y=['Critical', 'Warning', 'Info'],
-                 color_discrete_map={'Critical': 'red', 'Warning': 'orange', 'Info': 'gold'},
-                 title="System Instability Over Time")
-st.plotly_chart(fig_trend, use_container_width=True)
-
-# --- ACTIONABLE INSIGHTS ---
-st.divider()
-st.subheader("💡 AI Recommended Actions")
-col_ins1, col_ins2 = st.columns(2)
-
-with col_ins1:
-    st.info("**Immediate Dispatch:** Request technical audit for trains with AI risk > 80% to prevent service disruptions.")
-    st.info("**Safety Check:** 5 certificates are within 7 days of expiry. Link with workshop to ensure compliance.")
-
-with col_ins2:
-    st.warning("**Resource Allocation:** Fleet utilization is peaking. Consider moving 2 standby trains to active service on the Red Line.")
-    if alert_data is not None and not alert_data.empty and crit_count > 0:
-        st.error(f"**Safety Alert:** {crit_count} trains currently bypass safety thresholds. Operations must ground these units before 12:00 PM.")
-
-# Auto-refresh logic (sidebar)
-if st.sidebar.checkbox("Enable Auto-Refresh (60s)", value=True):
-    st.info("Auto-refresh active. Next scan in 60 seconds.")
-    # In a real app we'd use st_autorefresh, but for standard streamlit:
-    # time.sleep(60)
-    # st.rerun()
+if alert_data is not None and not alert_data.empty:
+    # Show top 3 critical alerts first, then warnings
+    top_alerts = pd.DataFrame()
+    crit_subset = alert_data[alert_data['Severity'] == 'CRITICAL'].head(3)
+    warn_subset = alert_data[alert_data['Severity'] == 'WARNING'].head(3)
+    
+    if not crit_subset.empty:
+        for _, row in crit_subset.iterrows():
+            st.error(f"🔴 **[{row.get('Category', 'Alert')}]** {row.get('Train_ID', '')} — {row.get('Description', '')}")
+    
+    if not warn_subset.empty:
+        for _, row in warn_subset.iterrows():
+            st.warning(f"🟠 **[{row.get('Category', 'Alert')}]** {row.get('Train_ID', '')} — {row.get('Description', '')}")
+    
+    if crit_subset.empty and warn_subset.empty:
+        st.success("No critical or warning alerts active.")
+else:
+    st.success("No alerts to display.")

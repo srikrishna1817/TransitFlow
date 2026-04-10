@@ -22,8 +22,7 @@ if admin_pin == "1234":
     with col2:
         cert_validity = st.selectbox("Default Certificate Validity (Months)", [3, 6, 12])
         
-    if st.button("💾 Save Parameters"):
-        st.success("Parameters saved successfully! (Note: changes are temporary for this session)")
+    st.info("ℹ️ These parameters apply to the current session only and are not persisted across sessions.")
 
     st.divider()
 

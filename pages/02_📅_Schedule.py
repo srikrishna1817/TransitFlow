@@ -33,30 +33,39 @@ if st.button("🔄 Refresh Data"):
 @st.cache_data(ttl=300) # cached
 def get_cached_gantt_data(schedule_df, base_date, gantt_filter):
     gantt_data = []
+    service_counter = 0
+    gantt_filter_upper = [str(f).upper() for f in gantt_filter]
     for _, row in schedule_df.iterrows():
         t_id = row['Train_ID']
-        assign = row['Assignment']
+        assign = str(row['Assignment']).upper()
         risk = row['AI_Risk_Percent']
         
-        if assign not in gantt_filter:
+        if assign not in gantt_filter_upper:
             continue
             
         if assign == 'SERVICE':
-            # Morning Peak Shift
-            gantt_data.append(dict(Task=t_id, Start=f"{base_date} 06:00:00", Finish=f"{base_date} 10:00:00", 
-                                   Assignment="SERVICE", Details=f"Morning Peak | Route: {row['Route']} | Risk: {risk}%"))
-            # Midday Shift
-            gantt_data.append(dict(Task=t_id, Start=f"{base_date} 11:30:00", Finish=f"{base_date} 15:30:00", 
-                                   Assignment="SERVICE", Details=f"Midday Shift | Route: {row['Route']} | Risk: {risk}%"))
-            # Evening Peak Shift
-            gantt_data.append(dict(Task=t_id, Start=f"{base_date} 17:00:00", Finish=f"{base_date} 21:00:00", 
-                                   Assignment="SERVICE", Details=f"Evening Peak | Route: {row['Route']} | Risk: {risk}%"))
+            shift_type = service_counter % 3
+            if shift_type == 0:
+                # Morning Shift (Early Induction)
+                gantt_data.append(dict(Task=t_id, Start=f"{base_date} 05:00:00", Finish=f"{base_date} 13:00:00", 
+                                       Assignment="SERVICE", Details=f"Morning Continuous | Route: {row.get('Route', 'N/A')} | Risk: {risk}%"))
+            elif shift_type == 1:
+                # Evening Shift (Late Runner)
+                gantt_data.append(dict(Task=t_id, Start=f"{base_date} 13:00:00", Finish=f"{base_date} 22:00:00", 
+                                       Assignment="SERVICE", Details=f"Evening Continuous | Route: {row.get('Route', 'N/A')} | Risk: {risk}%"))
+            else:
+                # Split Shift (Peak Cover)
+                gantt_data.append(dict(Task=t_id, Start=f"{base_date} 06:30:00", Finish=f"{base_date} 10:30:00", 
+                                       Assignment="SERVICE", Details=f"Morning Peak Split | Route: {row.get('Route', 'N/A')} | Risk: {risk}%"))
+                gantt_data.append(dict(Task=t_id, Start=f"{base_date} 16:30:00", Finish=f"{base_date} 20:30:00", 
+                                       Assignment="SERVICE", Details=f"Evening Peak Split | Route: {row.get('Route', 'N/A')} | Risk: {risk}%"))
+            service_counter += 1
         elif assign == 'STANDBY':
-            gantt_data.append(dict(Task=t_id, Start=f"{base_date} 06:00:00", Finish=f"{base_date} 21:00:00", 
+            gantt_data.append(dict(Task=t_id, Start=f"{base_date} 05:00:00", Finish=f"{base_date} 22:00:00", 
                                    Assignment="STANDBY", Details=f"Ready Backup | Risk: {risk}%"))
         elif assign == 'MAINTENANCE':
             gantt_data.append(dict(Task=t_id, Start=f"{base_date} 00:00:00", Finish=f"{base_date} 23:59:00", 
-                                   Assignment="MAINTENANCE", Details=f"Status: {row['Status']} | Risk: {risk}%"))
+                                   Assignment="MAINTENANCE", Details=f"Status: {row.get('Status', 'Secondary')} | Risk: {risk}%"))
     
     if gantt_data:
         df_gantt = pd.DataFrame(gantt_data)
@@ -216,23 +225,20 @@ if 'generated_schedule_df' in st.session_state:
 
         st.divider()
 
-        # ===== TABS =====
-        tab_gantt, tab_route, tab_shift, tab_table, tab4, tab5, tab6, tab7 = st.tabs([
+        base_date = target_date.strftime('%Y-%m-%d')
+
+        # ===== TABS (5 merged tabs) =====
+        tab_gantt, tab_detail, tab_route_opt, tab_crew, tab_whatif = st.tabs([
             "📊 Gantt Chart", 
-            "🗺️ Route Map", 
-            "⏰ Shift Planner",
             "📋 Detailed Schedule",
             "🚇 HMRL Route Optimizer",
             "👥 Crew Scheduling",
-            "🔮 What-If Scenarios",
-            "📆 Multi-Day Planner"
+            "🔮 What-If & Multi-Day"
         ])
 
         # ===== TAB 1: GANTT CHART =====
         with tab_gantt:
             st.subheader("24-Hour Train Assignment Timeline")
-            
-            base_date = target_date.strftime('%Y-%m-%d')
             
             # Sub-filter by assignment
             gantt_filter = st.multiselect(
@@ -271,17 +277,97 @@ if 'generated_schedule_df' in st.session_state:
             else:
                 st.info("No data available for the selected filters.")
 
-        # ===== TAB 2: ROUTE MAP =====
-        with tab_route:
-            st.subheader("Route Assignment Visualization")
+        # ===== TAB 2: DETAILED SCHEDULE (merged with Shift Planner) =====
+        with tab_detail:
+            st.subheader("Full Schedule Data")
+            st.dataframe(schedule_df, use_container_width=True)
             
+            # Download
+            csv = schedule_df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label="📥 Export Schedule CSV",
+                data=csv,
+                file_name=f"transitflow_schedule_{base_date}.csv",
+                mime="text/csv",
+            )
+
+            # --- Shift Planner (merged section) ---
+            with st.expander("⏰ Peak vs Off-Peak Shift Analysis", expanded=False):
+                hours = list(range(24))
+                demand_profile = []
+                for h in hours:
+                    if 7 <= h < 10 or 17 <= h < 20:
+                        demand_profile.append(required_trains) # Peak
+                    elif 10 <= h < 17:
+                        demand_profile.append(int(required_trains * 0.7)) # Off-Peak 1
+                    elif 5 <= h < 7 or 20 <= h < 22:
+                        demand_profile.append(int(required_trains * 0.5)) # Shoulder
+                    else:
+                        demand_profile.append(int(required_trains * 0.1)) # Night
+                        
+                available_profile = []
+                standby_profile = []
+                
+                for h in hours:
+                    if 7 <= h < 10 or 17 <= h < 20:
+                        act_serv = service_count
+                    elif 10 <= h < 17:
+                        act_serv = int(service_count * 0.75) # Off-peak sustained
+                    elif 5 <= h < 7 or 20 <= h < 22:
+                        act_serv = int(service_count * 0.55) # Smooth induction / reduction
+                    else:
+                        act_serv = int(service_count * 0.15) # Night skeleton service
+                    
+                    stndby = standby_count if 5 <= h < 22 else 0
+                    
+                    available_profile.append(act_serv)
+                    standby_profile.append(stndby)
+                    
+                shift_df = pd.DataFrame({
+                    'Hour_Val': hours,
+                    'Hour': [f"{str(h).zfill(2)}:00" for h in hours],
+                    'Required': demand_profile,
+                    'Active_Service': available_profile,
+                    'Standby_Available': standby_profile
+                })
+                # Handle divide by zero
+                shift_df['Coverage_%'] = np.where(shift_df['Required'] > 0, 
+                                                 (shift_df['Active_Service'] / shift_df['Required'] * 100), 
+                                                 100.0).round(1)
+                
+                # Summary Metrics
+                c1, c2, c3 = st.columns(3)
+                min_cov = shift_df[shift_df['Required'] > 0]['Coverage_%'].min() if (shift_df['Required'] > 0).any() else 100.0
+                c1.metric("Peak Hour Max Demand", max(demand_profile))
+                c2.metric("Minimum Standby Buffer", min([s for s in standby_profile if s > 0] + [0]) if sum(standby_profile)>0 else 0)
+                
+                coverage_drop = max(0.0, 100.0 - min_cov) if pd.notna(min_cov) else 0.0
+                is_critical = coverage_drop > 5
+                c3.metric("Critical Coverage Drop", f"{coverage_drop:.1f}%" if pd.notna(min_cov) else "N/A",
+                          delta="Insufficient" if is_critical else "Sufficient",
+                          delta_color="inverse" if is_critical else "normal")
+
+                # Chart: Stacked Bar & Line
+                fig_shift = go.Figure()
+                fig_shift.add_trace(go.Bar(x=shift_df['Hour'], y=shift_df['Active_Service'], name='Active Service', marker_color='#2ca02c'))
+                fig_shift.add_trace(go.Bar(x=shift_df['Hour'], y=shift_df['Standby_Available'], name='Standby Available', marker_color='#1f77b4'))
+                fig_shift.add_trace(go.Scatter(x=shift_df['Hour'], y=shift_df['Required'], mode='lines+markers', name='Required Demand', line=dict(color='red', width=3)))
+                
+                fig_shift.update_layout(barmode='stack', title="Hourly Train Demand vs Availability", hovermode='x unified')
+                st.plotly_chart(fig_shift, use_container_width=True)
+
+        # ===== TAB 3: HMRL ROUTE OPTIMIZER (merged with Route Map) =====
+        with tab_route_opt:
+            st.subheader("🚇 Intelligent Route Balancing (HMRL Specifications)")
+            st.info("Algorithms natively analyze Hyderabad's Red (Miyapur ↔ LB Nagar), Green (JBS ↔ MGBS), and Blue (Nagole ↔ Raidurg) lines.")
+
+            # --- Route Map Section (merged from old Route Map tab) ---
             if service_count > 0:
                 route_summary = schedule_df[schedule_df['Assignment'] == 'SERVICE']['Route'].value_counts().reset_index()
                 route_summary.columns = ['Route', 'Assigned_Trains']
                 route_summary['Capacity_Max'] = route_summary['Route'].map(route_caps)
                 route_summary['Utilization_%'] = (route_summary['Assigned_Trains'] / route_summary['Capacity_Max'] * 100).round(1)
                 
-                # Bar Chart
                 fig_route = go.Figure()
                 fig_route.add_trace(go.Bar(
                     x=route_summary['Route'], 
@@ -296,133 +382,32 @@ if 'generated_schedule_df' in st.session_state:
                     y=route_summary['Capacity_Max'], 
                     mode='lines+markers', 
                     name='Route Capacity Max',
-                    line=dict(color='black', width=2, dash='dash'),
+                    line=dict(color='#E2E8F0', width=2, dash='dash'),
                     marker=dict(symbol='star', size=10)
                 ))
                 fig_route.update_layout(title="Trains Assigned per Route vs Capacity", barmode='group')
                 st.plotly_chart(fig_route, use_container_width=True)
-                
-                st.subheader("Route-wise Assignee Roster")
-                route_roster = schedule_df[schedule_df['Assignment'] == 'SERVICE'][['Route', 'Train_ID', 'AI_Risk_Percent', 'Priority_Score']]
-                st.dataframe(route_roster.sort_values(by=['Route', 'Train_ID']), use_container_width=True)
             else:
                 st.warning("No trains assigned to service.")
 
-        # ===== TAB 3: SHIFT PLANNER =====
-        with tab_shift:
-            st.subheader("Peak vs Off-Peak Analysis")
-            
-            hours = list(range(24))
-            demand_profile = []
-            for h in hours:
-                if 7 <= h < 10 or 17 <= h < 20:
-                    demand_profile.append(required_trains) # Peak
-                elif 10 <= h < 17:
-                    demand_profile.append(int(required_trains * 0.7)) # Off-Peak 1
-                elif 5 <= h < 7 or 20 <= h < 22:
-                    demand_profile.append(int(required_trains * 0.5)) # Shoulder
-                else:
-                    demand_profile.append(int(required_trains * 0.1)) # Night
-                    
-            available_profile = []
-            standby_profile = []
-            
-            for h in hours:
-                act_serv = 0
-                if 6 <= h < 10: act_serv += service_count   # Morning Peak
-                elif 11 <= h <= 15: act_serv += service_count # Midday Shift
-                elif 17 <= h < 21: act_serv += service_count  # Evening Peak
-                
-                stndby = standby_count if 6 <= h < 21 else 0
-                
-                available_profile.append(min(act_serv, service_count))
-                standby_profile.append(stndby)
-                
-            shift_df = pd.DataFrame({
-                'Hour_Val': hours,
-                'Hour': [f"{str(h).zfill(2)}:00" for h in hours],
-                'Required': demand_profile,
-                'Active_Service': available_profile,
-                'Standby_Available': standby_profile
-            })
-            # Handle divide by zero
-            shift_df['Coverage_%'] = np.where(shift_df['Required'] > 0, 
-                                             (shift_df['Active_Service'] / shift_df['Required'] * 100), 
-                                             100.0).round(1)
-            
-            # Summary Metrics
-            c1, c2, c3 = st.columns(3)
-            min_cov = shift_df[shift_df['Required'] > 0]['Coverage_%'].min() if (shift_df['Required'] > 0).any() else 100.0
-            c1.metric("Peak Hour Max Demand", max(demand_profile))
-            c2.metric("Minimum Standby Buffer", min([s for s in standby_profile if s > 0] + [0]) if sum(standby_profile)>0 else 0)
-            
-            # BUG 4 FIX: Only show Insufficient when there is an actual shortfall (coverage_drop > 0)
-            coverage_drop = max(0.0, 100.0 - min_cov) if pd.notna(min_cov) else 0.0
-            is_critical = coverage_drop > 5  # Only flag if >5% shortfall
-            c3.metric("Critical Coverage Drop", f"{coverage_drop:.1f}%" if pd.notna(min_cov) else "N/A",
-                      delta="Insufficient" if is_critical else "Sufficient",
-                      delta_color="inverse" if is_critical else "normal")
+            st.divider()
 
-            # Chart 1: Stacked Bar & Line
-            fig_shift = go.Figure()
-            fig_shift.add_trace(go.Bar(x=shift_df['Hour'], y=shift_df['Active_Service'], name='Active Service', marker_color='#2ca02c'))
-            fig_shift.add_trace(go.Bar(x=shift_df['Hour'], y=shift_df['Standby_Available'], name='Standby Available', marker_color='#1f77b4'))
-            fig_shift.add_trace(go.Scatter(x=shift_df['Hour'], y=shift_df['Required'], mode='lines+markers', name='Required Demand', line=dict(color='red', width=3)))
-            
-            fig_shift.update_layout(barmode='stack', title="Hourly Train Demand vs Availability", hovermode='x unified')
-            st.plotly_chart(fig_shift, use_container_width=True)
-            
-            # Chart 2: Coverage Heatmap
-            st.subheader("Coverage Intensity Throughout the Day (%)")
-            heatmap_z = [shift_df['Coverage_%'].values]
-            fig_heat = go.Figure(data=go.Heatmap(
-                    z=heatmap_z,
-                    x=shift_df['Hour'],
-                    y=["Coverage Intensity"],
-                    colorscale="RdYlGn",
-                    zmin=80, zmax=120,
-                    text=[[f"{v}%" for v in shift_df['Coverage_%'].values]],
-                    texttemplate="%{text}",
-                    showscale=True
-                ))
-            fig_heat.update_layout(height=180, margin=dict(t=30, b=30))
-            st.plotly_chart(fig_heat, use_container_width=True)
-
-        # ===== TAB 4: DETAILED TABLE =====
-        with tab_table:
-            st.subheader("Full Schedule Data")
-            st.dataframe(schedule_df, use_container_width=True)
-            
-            # Download
-            csv = schedule_df.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                label="📥 Export Schedule CSV",
-                data=csv,
-                file_name=f"transitflow_schedule_{base_date}.csv",
-                mime="text/csv",
-            )
-            
-        # ===== TAB 4: ROUTE OPTIMIZER =====
-        with tab4:
-            st.subheader("🚇 Intelligent Route Balancing (HMRL Specifications)")
-            st.info("Algorithms natively analyze Hyderabad's Red (Miyapur ↔ LB Nagar), Green (JBS ↔ MGBS), and Blue (Nagole ↔ Raidurg) lines.")
-            
+            # --- GA Route Optimizer Section ---
             with st.spinner("Generating schedule..."):
                 optimized_routes, opt_time = perform_route_optimization(schedule_df, target_date.strftime("%Y-%m-%d"))
             st.caption(f"Data last cached: {opt_time}")
             
             st.dataframe(optimized_routes[['train_id', 'assigned_route', 'route_priority', 'home_depot', 'assignment_reason']], use_container_width=True)
             
-            if st.button("Optimize Route Distribution"):
-                with st.spinner("Optimizing route distribution..."):
-                    _, recs = perform_route_distribution(optimized_routes)
-                for r in recs:
-                    if "DEFICIT" in r:
-                        st.error(r)
-                    elif "PERFECT" in r.upper():
-                        st.success(r)
-                    else:
-                        st.info(r)
+            with st.spinner("Optimizing route distribution..."):
+                _, recs = perform_route_distribution(optimized_routes)
+            for r in recs:
+                if "DEFICIT" in r:
+                    st.error(r)
+                elif "PERFECT" in r.upper():
+                    st.success(r)
+                else:
+                    st.info(r)
                         
             # Guard: optimized_routes must be a valid non-empty DataFrame
             if optimized_routes is None or not isinstance(optimized_routes, pd.DataFrame) or optimized_routes.empty:
@@ -440,38 +425,44 @@ if 'generated_schedule_df' in st.session_state:
                 c1.metric("🔴 Red", f"{pct_r}%", delta=f"{def_r} Trains vs Ideal")
                 c2.metric("🟢 Green", f"{pct_g}%", delta=f"{def_g} Trains vs Ideal")
                 c3.metric("🔵 Blue", f"{pct_b}%", delta=f"{def_b} Trains vs Ideal")
+
+            # --- Route-wise Assignee Roster ---
+            if service_count > 0:
+                with st.expander("📋 Route-wise Assignee Roster"):
+                    route_roster = schedule_df[schedule_df['Assignment'] == 'SERVICE'][['Route', 'Train_ID', 'AI_Risk_Percent', 'Priority_Score']]
+                    st.dataframe(route_roster.sort_values(by=['Route', 'Train_ID']), use_container_width=True)
             
-        # ===== TAB 5: CREW SCHEDULING =====
-        with tab5:
+        # ===== TAB 4: CREW SCHEDULING =====
+        with tab_crew:
             st.subheader("👥 Crew Scheduling & Compliance Engine")
             st.info("Strictly monitors Indian Labor Law bounds: 8 hr limits & localized routing certifications.")
             
-            if st.button("Generate Crew Schedule For Today"):
-                with st.spinner("Generating schedule..."):
-                    crew_df, crew_time = perform_crew_scheduling(optimized_routes, target_date.strftime("%Y-%m-%d"))
-                st.caption(f"Data last cached: {crew_time}")
-                
-                # Guard: crew_df must be a valid non-empty DataFrame
-                if crew_df is None or not isinstance(crew_df, pd.DataFrame) or crew_df.empty:
-                    st.warning("Crew scheduling unavailable. The crew roster DB may be empty — using fallback dummy pool next time.")
-                else:
-                    mc1, mc2, mc3 = st.columns(3)
-                    mc1.metric("Total Duty Shifts Generated", len(crew_df))
-                    mc2.metric("Active Drivers Placed", len(crew_df['driver_id'].unique()))
-                    mc3.metric("Legal Compliance", "100%")
-                    st.dataframe(crew_df[['train_id', 'route', 'shift_start', 'shift_end', 'driver_id', 'driver_name', 'conductor_id', 'home_depot']], use_container_width=True)
+            with st.spinner("Generating schedule..."):
+                crew_df, crew_time = perform_crew_scheduling(optimized_routes, target_date.strftime("%Y-%m-%d"))
+            st.caption(f"Data last cached: {crew_time}")
+            
+            # Guard: crew_df must be a valid non-empty DataFrame
+            if crew_df is None or not isinstance(crew_df, pd.DataFrame) or crew_df.empty:
+                st.warning("Crew scheduling unavailable. The crew roster DB may be empty — using fallback dummy pool next time.")
+            else:
+                mc1, mc2, mc3 = st.columns(3)
+                mc1.metric("Total Duty Shifts Generated", len(crew_df))
+                mc2.metric("Active Drivers Placed", len(crew_df['driver_id'].unique()))
+                mc3.metric("Legal Compliance", "100%")
+                st.dataframe(crew_df[['train_id', 'route', 'shift_start', 'shift_end', 'driver_id', 'driver_name', 'conductor_id', 'home_depot']], use_container_width=True)
 
-        # ===== TAB 6: WHAT-IF SCENARIOS =====
-        with tab6:
+        # ===== TAB 5: WHAT-IF & MULTI-DAY =====
+        with tab_whatif:
             st.subheader("🔮 Simulation Control Room")
             scenario = st.selectbox("Trigger Emergency Protocol", [
+                "None (Normal Operations)",
                 "Train Breakdown on Red Line",
                 "Ameerpet Interchange Disruption",
                 "Monsoon Impact",
                 "Tech Hub Rush (Blue Line Surge)"
             ])
             
-            if st.button("Run Simulation"):
+            if scenario != "None (Normal Operations)":
                 with st.spinner("Calculating passenger impact and mitigation paths..."):
                     result_data, sim_time = perform_scenario_analysis(scenario, schedule_df)
                     st.caption(f"Simulation last cached: {sim_time}")
@@ -493,20 +484,20 @@ if 'generated_schedule_df' in st.session_state:
                             st.write(f"**{k}:** {v}")
                     else:
                         st.info("Applying +10min rain delay headers across CBTC Network.")
-                        
-        # ===== TAB 7: MULTI-DAY PLANNER =====
-        with tab7:
+
+            st.divider()
+
+            # --- Multi-Day Planner (merged) ---
             st.subheader("📆 Macro Rolling Operations")
             lookahead = st.slider("Forecast Range (Days)", 7, 30, 7)
             
-            if st.button("Generate Rolling Forecast"):
-                 with st.spinner("Generating schedule..."):
-                     sched, week_time = perform_weekly_schedule(target_date)
-                 st.caption(f"Data last cached: {week_time}")
-                 
-                 st.write("### Simulated Weekly Baseline")
-                 st.dataframe(sched, use_container_width=True)
-                 st.info("System has booked 1 Mega Block safely out of path for next Sunday.")
+            with st.spinner("Generating rolling forecast..."):
+                sched, week_time = perform_weekly_schedule(target_date)
+            st.caption(f"Data last cached: {week_time}")
+            
+            st.write("### Simulated Weekly Baseline")
+            st.dataframe(sched, use_container_width=True)
+            st.info("System has booked 1 Mega Block safely out of path for next Sunday.")
             
         if alerts:
             st.divider()

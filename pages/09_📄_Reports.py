@@ -32,12 +32,12 @@ if not can_perform_action(user['role'], 'generate_all_reports'):
         REPORT_OPTIONS = []
 
 st.title("📄 Automated Reporting Engine")
-st.markdown("Generate, schedule, and track professional PDFs for HMRL executives and operations teams.")
+st.markdown("Generate and track professional PDFs for HMRL executives and operations teams.")
 st.divider()
 
 report_gen = ReportGenerator(user_id=user['user_id'] if user else None)
 
-tab1, tab2, tab3 = st.tabs(["📋 Generate Reports", "🗂️ Report History", "📧 Scheduled Reports"])
+tab1, tab2 = st.tabs(["📋 Generate Reports", "🗂️ Report History"])
 
 with tab1:
     if not REPORT_OPTIONS:
@@ -102,8 +102,7 @@ with tab1:
                         st.error(f"Error generating report: {str(e)}")
 
         with col2:
-            st.info("💡 **Tip:** PDFs are automatically stamped with HMRL branding securely saved entirely to the local `reports/` folder.")
-            st.image("https://upload.wikimedia.org/wikipedia/en/thumb/8/87/Hyderabad_Metro_Logo.png/220px-Hyderabad_Metro_Logo.png", width=100)
+            st.info("💡 **Tip:** PDFs are automatically stamped with HMRL branding and saved to the local `reports/` folder.")
 
 
 with tab2:
@@ -142,29 +141,3 @@ with tab2:
                         st.success("Report deleted successfully. Refresh the page.")
                     else:
                         st.error("Failed to delete.")
-
-with tab3:
-    st.subheader("📧 Scheduled Automated Reports")
-    st.markdown("Configure reports to be automatically generated and emailed/saved to disk.")
-    
-    if not can_perform_action(user['role'], 'generate_all_reports') and not can_perform_action(user['role'], 'generate_maintenance_reports'):
-        st.warning("Insufficient permissions to scheduled reports.")
-    else:
-        sc1, sc2, sc3 = st.columns(3)
-        
-        sc1.markdown("#### Daily Operations")
-        sc1.checkbox("Enable Daily Generation", value=True)
-        sc1.caption("Runs daily at 23:00")
-        sc1.code("Cron: 0 23 * * *")
-        
-        sc2.markdown("#### Weekly Schedule")
-        sc2.checkbox("Enable Weekly Generation", value=True)
-        sc2.caption("Runs Monday at 08:00")
-        sc2.code("Cron: 0 8 * * 1")
-        
-        sc3.markdown("#### Executive Summary")
-        sc3.checkbox("Enable Monthly Generation", value=False)
-        sc3.caption("Runs 1st of the month at 09:00")
-        sc3.code("Cron: 0 9 1 * *")
-        
-        st.info("ℹ️ Scheduled jobs are orchestrated externally via server chron/task scheduler. Toggling simply sets the flag in the `scheduled_reports` database table.")
