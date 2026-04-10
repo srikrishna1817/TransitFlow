@@ -292,7 +292,9 @@ if 'generated_schedule_df' in st.session_state:
             )
 
             # --- Shift Planner (merged section) ---
-            with st.expander("⏰ Peak vs Off-Peak Shift Analysis", expanded=False):
+            st.divider()
+            st.subheader("⏰ Peak vs Off-Peak Shift Analysis")
+            with st.container():
                 hours = list(range(24))
                 demand_profile = []
                 for h in hours:
