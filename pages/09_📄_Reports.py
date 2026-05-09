@@ -12,7 +12,7 @@ from utils.db_utils import db
 from utils.report_generator import ReportGenerator
 from utils.report_helpers import get_report_history, delete_report
 
-st.set_page_config(page_title="Reports & Export", page_icon="📄", layout="wide")
+st.set_page_config(page_title="Reports & Export", page_icon="📄", layout="wide", initial_sidebar_state="collapsed")
 user = require_auth('Reports')
 
 # Filter options based on permissions

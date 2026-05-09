@@ -35,6 +35,41 @@ def get_custom_css():
         footer {visibility: hidden;}
 
         /* ── Premium Glassmorphism Metric Cards ───────────────────────── */
+        
+        /* ── Sidebar Overhaul ─────────────────────────────────────────── */
+        [data-testid="stSidebar"] {
+            background: linear-gradient(180deg, rgba(15,23,42,0.85) 0%, rgba(2,6,23,0.95) 100%) !important;
+            backdrop-filter: blur(25px) !important;
+            -webkit-backdrop-filter: blur(25px) !important;
+            border-right: 1px solid rgba(255,255,255,0.08) !important;
+            box-shadow: 5px 0 25px rgba(0,0,0,0.5) !important;
+        }
+        [data-testid="stSidebarUserContent"] {
+            padding-top: 2rem !important;
+        }
+        [data-testid="stSidebarNav"] {
+            background: transparent !important;
+        }
+        [data-testid="stSidebarNav"] li div {
+            border-radius: 12px !important;
+            margin: 4px 12px !important;
+            transition: all 0.3s ease !important;
+        }
+        [data-testid="stSidebarNav"] li div:hover {
+            background: rgba(59,130,246,0.15) !important;
+            transform: translateX(5px) !important;
+        }
+        [data-testid="stSidebarNav"] span {
+            font-family: 'Outfit', sans-serif !important;
+            font-size: 1.05rem !important;
+            font-weight: 500 !important;
+            color: #94A3B8 !important;
+            letter-spacing: 0.5px !important;
+        }
+        /* Active page in sidebar */
+        [data-testid="stSidebarNav"] div[data-testid="stSidebarNavSeparator"] {
+            display: none !important;
+        }
         .hmrl-metric-card {
             background: var(--glass-bg);
             backdrop-filter: blur(16px);

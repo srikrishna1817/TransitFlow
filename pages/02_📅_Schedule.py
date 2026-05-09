@@ -17,7 +17,7 @@ from advanced_scheduling.crew_scheduler import assign_crew_to_trains
 from advanced_scheduling.scenario_analyzer import simulate_train_breakdown, analyze_interchange_disruption, optimize_for_event
 from advanced_scheduling.multi_day_planner import generate_weekly_schedule
 
-st.set_page_config(page_title="HMRL Schedule Planner", page_icon="📅", layout="wide")
+st.set_page_config(page_title="HMRL Schedule Planner", page_icon="📅", layout="wide", initial_sidebar_state="collapsed")
 user = require_auth('Schedule')
 
 apply_theme()

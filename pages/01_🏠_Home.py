@@ -8,7 +8,7 @@ from utils.ui_theme import apply_theme
 from components.custom_widgets import metric_card, breadcrumb, status_badge
 from utils.keyboard_shortcuts import register_shortcuts
 
-st.set_page_config(page_title="HMRL Home", page_icon="🚄", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="HMRL Home", page_icon="🚄", layout="wide", initial_sidebar_state="collapsed")
 user = require_auth('Home')
 
 apply_theme()

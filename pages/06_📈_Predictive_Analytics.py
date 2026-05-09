@@ -18,7 +18,7 @@ from utils.analytics_utils import (
     generate_recommendations
 )
 
-st.set_page_config(page_title="Predictive Analytics", page_icon="📈", layout="wide")
+st.set_page_config(page_title="Predictive Analytics", page_icon="📈", layout="wide", initial_sidebar_state="collapsed")
 user = require_auth('Predictive_Analytics')
 
 st.title("📈 Predictive Analytics Hub")

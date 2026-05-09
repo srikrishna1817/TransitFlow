@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from auth.page_guard import require_auth
 
 # Page Config
-st.set_page_config(page_title="Alerts Dashboard", page_icon="🚨", layout="wide")
+st.set_page_config(page_title="Alerts Dashboard", page_icon="🚨", layout="wide", initial_sidebar_state="collapsed")
 user = require_auth('Alerts')
 
 # Header

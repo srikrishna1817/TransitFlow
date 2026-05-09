@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from auth.page_guard import require_auth
 from utils.ui_theme import apply_theme
 
-st.set_page_config(page_title="Analytics", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Analytics", page_icon="📊", layout="wide", initial_sidebar_state="collapsed")
 apply_theme()
 user = require_auth('Analytics')
 st.title("📊 Analytics Dashboard")

@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from auth.page_guard import require_auth
 from auth.permissions import can_perform_action
 
-st.set_page_config(page_title="Maintenance", page_icon="🔧", layout="wide")
+st.set_page_config(page_title="Maintenance", page_icon="🔧", layout="wide", initial_sidebar_state="collapsed")
 user = require_auth('Maintenance')
 st.title("🔧 Maintenance Tracking")
 

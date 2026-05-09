@@ -9,7 +9,7 @@ from auth.page_guard import require_auth
 from auth.permissions import can_perform_action
 from utils.ui_theme import apply_theme
 
-st.set_page_config(page_title="ML Insights", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="ML Insights", page_icon="🤖", layout="wide", initial_sidebar_state="collapsed")
 apply_theme()
 user = require_auth('ML_Insights')
 st.title("🤖 ML Insights — Advanced Predictive Maintenance")
