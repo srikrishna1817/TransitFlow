@@ -2,7 +2,7 @@
 
 A comprehensive AI-powered scheduling and operations management 
 system for Hyderabad Metro Rail (HMRL), built with Streamlit, 
-MySQL, and Machine Learning.
+TiDB Cloud (MySQL-compatible), and Machine Learning.
 
 ## 🌐 Live Demo
 **URL:** https://transitflow-hmrl.streamlit.app
@@ -26,6 +26,8 @@ MySQL, and Machine Learning.
   30-day maintenance calendar, cost forecasting
 - **Automated Reports** — PDF report generation with 
   6 report types including Executive Summary
+- **Premium UI/UX** — Modern Dark Glassmorphism Executive 
+  Dashboard with fluid animations and responsive design
 - **Role-based Access** — 4 roles with feature-level 
   permissions (Admin, Scheduler, Maintenance, Viewer)
 - **Alert System** — Real-time critical/warning/info alerts 
@@ -35,8 +37,8 @@ MySQL, and Machine Learning.
 
 | Category | Technologies |
 |----------|-------------|
-| Frontend | Streamlit 1.32.2 |
-| Database | MySQL (Railway Cloud) |
+| Frontend | Streamlit (Custom Glassmorphism Theme) |
+| Database | TiDB Cloud (MySQL-Compatible Serverless) |
 | ML | scikit-learn, XGBoost, LightGBM, SHAP |
 | Scheduling | DEAP (Genetic Algorithms) |
 | Visualization | Plotly, Matplotlib |
@@ -79,10 +81,10 @@ heuristic approaches:
 2. Install dependencies:
    pip install -r requirements.txt
 
-3. Setup environment variables in .env:
-   MYSQLHOST=your_host
-   MYSQLPORT=3306
-   MYSQLUSER=your_user
+3. Setup environment variables in .env (Use TiDB Cloud Credentials):
+   MYSQLHOST=gateway01.ap-southeast-1.prod.aws.tidbcloud.com
+   MYSQLPORT=4000
+   MYSQLUSER=your_prefix.root
    MYSQLPASSWORD=your_password
    MYSQLDATABASE=transitflow_db
 
