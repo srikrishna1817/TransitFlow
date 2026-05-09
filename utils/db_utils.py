@@ -42,9 +42,11 @@ conn_config = DB_CONFIG.copy()
 conn_config['charset'] = 'utf8mb4'
 conn_config['use_unicode'] = True
 conn_config['autocommit'] = True
+conn_config['ssl_verify_cert'] = True
+conn_config['ssl_verify_identity'] = True
 
 # SQLAlchemy connection string format: mysql+pymysql://user:password@host:port/dbname
-SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
+SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}?ssl_verify_cert=true&ssl_verify_identity=true"
 
 # Configure basic logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='db_operations.log')
