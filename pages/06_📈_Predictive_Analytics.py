@@ -85,16 +85,16 @@ with tab1:
         max_date = data['health_data']['Date'].max()
         final_health = data['health_data'][data['health_data']['Date'] == max_date]['Health'].values[0]
 
-        # Convert timestamps to string to bypass Pandas Timestamp math errors in Plotly annotations
-        today_date_str = str(today_date.date() if hasattr(today_date, 'date') else today_date)
-        max_date_str = str(max_date.date() if hasattr(max_date, 'date') else max_date)
+        # Convert timestamps to milliseconds (float) to bypass Pandas/Plotly math errors
+        today_date_ms = float(pd.to_datetime(today_date).timestamp() * 1000)
+        max_date_ms = float(pd.to_datetime(max_date).timestamp() * 1000)
 
-        fig_health.add_vline(x=today_date_str, line_width=2, line_dash="dash", line_color="white",
+        fig_health.add_vline(x=today_date_ms, line_width=2, line_dash="dash", line_color="white",
                              annotation_text="Today", annotation_position="top left",
                              annotation_font=dict(color="white"))
 
         fig_health.add_vrect(
-            x0=today_date_str, x1=max_date_str,
+            x0=today_date_ms, x1=max_date_ms,
             fillcolor="#3B9EFF", opacity=0.1,
             layer="below", line_width=0
         )
@@ -108,7 +108,7 @@ with tab1:
         ))
 
         fig_health.add_annotation(
-            x=max_date_str, y=final_health,
+            x=max_date_ms, y=final_health,
             text=f"Predicted: {final_health:.1f}",
             showarrow=True, arrowhead=1, ax=-40, ay=-30,
             font=dict(color="#FB923C"), arrowcolor="#FB923C"
