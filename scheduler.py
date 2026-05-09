@@ -7,7 +7,7 @@ from datetime import datetime
 from datetime import datetime
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=1800)
 def generate_schedule(required_service_trains=45, save_to_db=False):
     """
     Generate optimized train schedule.

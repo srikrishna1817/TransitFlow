@@ -5,6 +5,7 @@ utils/analytics_utils.py — Functions for predictive analytics & forecasting.
 import pandas as pd
 import numpy as np
 import datetime
+import streamlit as st
 from sklearn.linear_model import LinearRegression
 from utils.db_utils import db
 import logging
@@ -13,6 +14,49 @@ logger = logging.getLogger(__name__)
 
 def get_db():
     return db
+
+
+@st.cache_data(ttl=600)
+def _fetch_health_scores():
+    try:
+        df = db.fetch_dataframe("SELECT health_score FROM trains_master")
+        return df['health_score'].mean() if df is not None and not df.empty else 75.0
+    except Exception:
+        return 75.0
+
+
+@st.cache_data(ttl=600)
+def _fetch_ml_predictions():
+    try:
+        return db.fetch_dataframe(
+            "SELECT train_id, maintenance_probability, maintenance_required, "
+            "failure_type, time_to_failure_days, estimated_cost_inr, severity_score "
+            "FROM ml_predictions"
+        )
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=600)
+def _fetch_maintenance_costs_90d():
+    try:
+        return db.fetch_dataframe(
+            "SELECT reported_date as Date, cost_inr as Cost, issue_description as Failure_Type "
+            "FROM maintenance_jobs "
+            "WHERE reported_date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)"
+        )
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=600)
+def _fetch_seasonal_data():
+    try:
+        return db.fetch_dataframe(
+            "SELECT reported_date, issue_description as issue_type FROM maintenance_jobs"
+        )
+    except Exception:
+        return None
 
 def generate_recommendations(health_slope, top_future_failures, over_budget):
     """Generate actionable insights based on forecast signals."""
@@ -44,9 +88,8 @@ def forecast_fleet_health(days_ahead=30):
     Since historical daily health isn't perfectly tracked, we use a realistic synthetic baseline
     calibrated to the current true fleet average.
     """
-    # 1. Get current true average health
-    curr_df = get_db().fetch_dataframe("SELECT health_score FROM trains_master")
-    current_avg = curr_df['health_score'].mean() if not curr_df.empty else 75.0
+    # 1. Get current true average health (cached)
+    current_avg = _fetch_health_scores()
     
     # 2. Reconstruct last 90 days with some noise and a slight trend
     end_date = datetime.date.today()
@@ -94,8 +137,10 @@ def predict_maintenance_calendar(days_ahead=30):
     """
     Map ML predictions from `ml_predictions` to future calendar dates.
     """
-    query = "SELECT train_id, maintenance_probability, maintenance_required, failure_type, time_to_failure_days, estimated_cost_inr, severity_score FROM ml_predictions"
-    preds_df = get_db().fetch_dataframe(query)
+    query = ("SELECT train_id, maintenance_probability, maintenance_required, "
+             "failure_type, time_to_failure_days, estimated_cost_inr, severity_score "
+             "FROM ml_predictions")
+    preds_df = _fetch_ml_predictions()
     
     if preds_df is None:
         preds_df = pd.DataFrame(columns=['train_id', 'maintenance_probability', 'maintenance_required', 'failure_type', 'time_to_failure_days', 'estimated_cost_inr', 'severity_score'])
@@ -110,7 +155,7 @@ def predict_maintenance_calendar(days_ahead=30):
     # If the ML model says all trains are super healthy (>30d), artificially bring the top 15 weakest trains 
     # into the 30-day window so the dashboard has rich data to display!
     if preds_df.empty:
-        preds_df = get_db().fetch_dataframe(query)
+        preds_df = _fetch_ml_predictions()
         if preds_df is not None and not preds_df.empty:
             preds_df = preds_df.sort_values(by='time_to_failure_days').head(15).copy()
             np.random.seed(42)
@@ -165,7 +210,7 @@ def calculate_cost_forecast(months_ahead=3):
     FROM maintenance_jobs
     WHERE reported_date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
     """
-    hist_costs = get_db().fetch_dataframe(hist_query)
+    hist_costs = _fetch_maintenance_costs_90d()
     
     # 2. Predicted Future Costs (next 90 days)
     pred_query = """
@@ -256,7 +301,7 @@ def analyze_seasonal_patterns():
     SELECT reported_date, issue_type
     FROM maintenance_jobs
     """
-    df = get_db().fetch_dataframe(query)
+    df = _fetch_seasonal_data()
     
     # --- DEMO DATA INJECTION: SEASONS ---
     if df is None or df.empty:

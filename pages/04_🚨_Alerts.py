@@ -3,8 +3,7 @@ import pandas as pd
 import numpy as np
 import datetime
 import plotly.express as px
-from scheduler import generate_schedule
-from utils.data_loader import load_trains_data, load_maintenance_jobs, load_certificates_data, load_historical_operations, log_alert, get_active_alerts
+from utils.data_loader import load_trains_data, load_maintenance_jobs, load_certificates_data, log_alert, get_active_alerts
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from auth.page_guard import require_auth
@@ -19,107 +18,63 @@ curr_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 st.caption(f"Last System Scan: {curr_time}")
 
 # --- DATA SCANNING ENGINE ---
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=120)
 def scan_for_alerts():
     try:
-            # Load Raw Data (falling back transparently if DB fails)
         trains_df = load_trains_data()
-        maint_df = load_maintenance_jobs()
-        cert_df = load_certificates_data()
-        hist_df = load_historical_operations()
-        
-        # Run AI Scheduler for Risk Predictions
-        # Using a default requirement of 30 to get standby/service assignments
-        schedule_df, _ = generate_schedule(required_service_trains=30, save_to_db=False)
+        maint_df  = load_maintenance_jobs()
+        cert_df   = load_certificates_data()
         
         all_alerts = []
         now = datetime.datetime.now()
         
-        # 1. SCAN CERTIFICATES
-        cert_df['Valid_Until'] = pd.to_datetime(cert_df['Valid_Until'])
-        cert_df['Days_Until'] = (cert_df['Valid_Until'] - now).dt.days
+        # 1. SCAN CERTIFICATES — vectorized
+        cert_df['Valid_Until'] = pd.to_datetime(cert_df['Valid_Until'], errors='coerce')
+        cert_df['Days_Until']  = (cert_df['Valid_Until'] - now).dt.days
         
-        for _, row in cert_df.iterrows():
-            if row['Days_Until'] < 0:
-                all_alerts.append({
-                    'Severity': 'CRITICAL', 'Category': 'Expired Certificate',
-                    'Train_ID': row['Train_ID'], 'Description': f"{row['Department']} certificate expired {-row['Days_Until']} days ago.",
-                    'Action': 'Ground train immediately', 'Timestamp': row['Valid_Until'].strftime("%Y-%m-%d")
-                })
-            elif 0 <= row['Days_Until'] <= 7:
-                all_alerts.append({
-                    'Severity': 'WARNING', 'Category': 'Certificate Expiry',
-                    'Train_ID': row['Train_ID'], 'Description': f"{row['Department']} certificate expires in {row['Days_Until']} days.",
-                    'Action': 'Schedule renewal inspection', 'Timestamp': row['Valid_Until'].strftime("%Y-%m-%d")
-                })
-            elif 7 < row['Days_Until'] <= 30:
-                all_alerts.append({
-                    'Severity': 'INFO', 'Category': 'Certificate Expiry',
-                    'Train_ID': row['Train_ID'], 'Description': f"{row['Department']} cert valid for {row['Days_Until']} more days.",
-                    'Action': 'Monitor for renewal', 'Timestamp': row['Valid_Until'].strftime("%Y-%m-%d")
-                })
+        for _, row in cert_df[cert_df['Days_Until'] < 31].iterrows():
+            d = int(row['Days_Until'])
+            if d < 0:
+                all_alerts.append({'Severity': 'CRITICAL', 'Category': 'Expired Certificate',
+                    'Train_ID': row['Train_ID'], 'Description': f"{row['Department']} certificate expired {-d} days ago.",
+                    'Action': 'Ground train immediately', 'Timestamp': row['Valid_Until'].strftime('%Y-%m-%d')})
+            elif d <= 7:
+                all_alerts.append({'Severity': 'WARNING', 'Category': 'Certificate Expiry',
+                    'Train_ID': row['Train_ID'], 'Description': f"{row['Department']} cert expires in {d} days.",
+                    'Action': 'Schedule renewal inspection', 'Timestamp': row['Valid_Until'].strftime('%Y-%m-%d')})
+            else:
+                all_alerts.append({'Severity': 'INFO', 'Category': 'Certificate Expiry',
+                    'Train_ID': row['Train_ID'], 'Description': f"{row['Department']} cert valid for {d} more days.",
+                    'Action': 'Monitor for renewal', 'Timestamp': row['Valid_Until'].strftime('%Y-%m-%d')})
 
-        # 2. SCAN MAINTENANCE JOBS
-        for _, row in maint_df.iterrows():
-            if row['Status'] == 'Open':
-                if row['Priority'] == 'High':
-                    all_alerts.append({
-                        'Severity': 'CRITICAL', 'Category': 'Critical Maintenance',
-                        'Train_ID': row['Train_ID'], 'Description': f"High-priority job {row['Job_Card_ID']} is still OPEN.",
-                        'Action': 'Assign technician immediately', 'Timestamp': 'N/A'
-                    })
-                elif row['Priority'] == 'Medium':
-                    all_alerts.append({
-                        'Severity': 'WARNING', 'Category': 'Open Maintenance',
-                        'Train_ID': row['Train_ID'], 'Description': f"Medium-priority job {row['Job_Card_ID']} pending.",
-                        'Action': 'Resolve within 48 hours', 'Timestamp': 'N/A'
-                    })
+        # 2. SCAN MAINTENANCE JOBS — vectorized
+        open_jobs = maint_df[maint_df['Status'] == 'Open']
+        for _, row in open_jobs[open_jobs['Priority'] == 'High'].iterrows():
+            all_alerts.append({'Severity': 'CRITICAL', 'Category': 'Critical Maintenance',
+                'Train_ID': row['Train_ID'], 'Description': f"High-priority job {row['Job_Card_ID']} is still OPEN.",
+                'Action': 'Assign technician immediately', 'Timestamp': 'N/A'})
+        for _, row in open_jobs[open_jobs['Priority'] == 'Medium'].iterrows():
+            all_alerts.append({'Severity': 'WARNING', 'Category': 'Open Maintenance',
+                'Train_ID': row['Train_ID'], 'Description': f"Medium-priority job {row['Job_Card_ID']} pending.",
+                'Action': 'Resolve within 48 hours', 'Timestamp': 'N/A'})
 
-        # 3. SCAN AI RISKS & MILEAGE
-        # Mileage Threshold: 15,000 km
-        for _, row in schedule_df.iterrows():
-            t_id = row['Train_ID']
-            risk = row['AI_Risk_Percent']
-            
-            # Get current mileage from trains_df
-            mileage = trains_df[trains_df['Train_ID'] == t_id]['Current_Mileage'].iloc[0]
-            
-            # AI Risk
-            if risk > 80:
-                all_alerts.append({
-                    'Severity': 'CRITICAL', 'Category': 'High ML Risk',
-                    'Train_ID': t_id, 'Description': f"AI predicts {risk}% failure probability.",
-                    'Action': 'Remove from service for inspection', 'Timestamp': 'AI Prediction'
-                })
-            elif 50 < risk <= 80:
-                all_alerts.append({
-                    'Severity': 'WARNING', 'Category': 'Medium ML Risk',
-                    'Train_ID': t_id, 'Description': f"AI predicts {risk}% failure probability.",
-                    'Action': 'Schedule preventive check', 'Timestamp': 'AI Prediction'
-                })
-            
-            # Mileage
-            if mileage > 14250: # 95% of 15000
-                all_alerts.append({
-                    'Severity': 'CRITICAL', 'Category': 'Mileage Limit',
-                    'Train_ID': t_id, 'Description': f"Train reached {mileage} km. Must go for overhaul.",
-                    'Action': 'Ground train for maintenance', 'Timestamp': 'Telemetry'
-                })
-            elif 13500 < mileage <= 14250: # 90-95%
-                all_alerts.append({
-                    'Severity': 'WARNING', 'Category': 'Mileage Warning',
-                    'Train_ID': t_id, 'Description': f"Train at {mileage} km. Approaching limit.",
-                    'Action': 'Priority scheduling for workshop', 'Timestamp': 'Telemetry'
-                })
+        # 3. SCAN MILEAGE — vectorized (skip slow schedule AI call)
+        mileage_col = 'Current_Mileage' if 'Current_Mileage' in trains_df.columns else 'total_mileage_km'
+        for _, row in trains_df[trains_df[mileage_col] > 13500].iterrows():
+            m = int(row[mileage_col])
+            sev = 'CRITICAL' if m > 14250 else 'WARNING'
+            all_alerts.append({'Severity': sev, 'Category': 'Mileage Limit' if sev == 'CRITICAL' else 'Mileage Warning',
+                'Train_ID': row['Train_ID'], 'Description': f"Train at {m:,} km — {'approaching overhaul limit' if sev == 'WARNING' else 'must go for overhaul'}.",
+                'Action': 'Ground for maintenance' if sev == 'CRITICAL' else 'Priority scheduling', 'Timestamp': 'Telemetry'})
 
-        # 4. CAPACITY CHECK
-        available_count = len(schedule_df[schedule_df['Priority_Score'] > 0])
-        if available_count < 30: # Assuming 30 is the critical threshold for peak hours
-            all_alerts.append({
-                'Severity': 'CRITICAL', 'Category': 'Fleet Capacity',
-                'Train_ID': 'FLEET-WIDE', 'Description': f"Only {available_count} trains available. Required: 30.",
-                'Action': 'Activate emergency fleet protocol', 'Timestamp': 'N/A'
-            })
+        # 4. CAPACITY CHECK — use train status directly, no ML call needed
+        active_count = len(trains_df[trains_df['Status'].str.lower() == 'active'])
+        if active_count < 30:
+            all_alerts.append({'Severity': 'CRITICAL', 'Category': 'Fleet Capacity',
+                'Train_ID': 'FLEET-WIDE', 'Description': f"Only {active_count} trains active. Required: 30.",
+                'Action': 'Activate emergency fleet protocol', 'Timestamp': 'N/A'})
+
+        schedule_df = pd.DataFrame()  # no longer computed here
 
         # Synchronize with Database to avoid endless duplicates
         db_alerts_now = get_active_alerts()
@@ -138,13 +93,13 @@ def scan_for_alerts():
             mapping = {'severity': 'Severity', 'category': 'Category', 'train_id': 'Train_ID', 'description': 'Description', 'id': 'Alert_ID'}
             db_alerts = db_alerts.rename(columns=mapping)
 
-        return db_alerts, trains_df, schedule_df
+        return db_alerts, trains_df
     except Exception as e:
         st.error(f"Scan failed: {e}")
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+        return pd.DataFrame(), pd.DataFrame()
 
 # Execute Scan
-alert_data, trains_df, schedule_df = scan_for_alerts()
+alert_data, trains_df = scan_for_alerts()
 
 if alert_data is None or alert_data.empty:
     st.success("✅ System check complete. No active health alerts found.")

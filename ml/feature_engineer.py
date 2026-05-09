@@ -135,9 +135,18 @@ class FeatureEngineer:
         self.fleet_avg_mileage = trains['total_km'].mean()
         self.fleet_avg_health = trains['health_score'].mean()
 
+        # Pre-group dataframes by train_id to avoid O(N) filtering inside the loop
+        hist_grouped = dict(tuple(hist.groupby('train_id'))) if 'train_id' in hist.columns else {}
+        maint_grouped = dict(tuple(maint.groupby('train_id'))) if 'train_id' in maint.columns else {}
+        certs_grouped = dict(tuple(certs.groupby('train_id'))) if 'train_id' in certs.columns else {}
+
         for tid in all_ids:
             try:
-                rec = self._build_train_features(tid, trains, certs, hist, maint, today)
+                t_hist = hist_grouped.get(tid, pd.DataFrame(columns=hist.columns))
+                t_maint = maint_grouped.get(tid, pd.DataFrame(columns=maint.columns))
+                t_certs = certs_grouped.get(tid, pd.DataFrame(columns=certs.columns))
+                
+                rec = self._build_train_features(tid, trains, t_certs, t_hist, t_maint, today)
                 records.append(rec)
             except Exception as e:
                 logger.warning(f"Feature build failed for {tid}: {e}")
@@ -146,8 +155,8 @@ class FeatureEngineer:
         feature_df = feature_df.fillna(0)
         return feature_df
 
-    def _build_train_features(self, tid, trains, certs, hist, maint, today):
-        """Build feature dict for a single train."""
+    def _build_train_features(self, tid, trains, t_certs, t_hist, t_maint, today):
+        """Build feature dict for a single train using pre-filtered dataframes."""
         t = trains[trains['train_id'] == tid]
         if t.empty:
             t_info = {'year_of_manufacture': 2015, 'total_km': 200000, 'health_score': 75}
@@ -166,7 +175,6 @@ class FeatureEngineer:
         is_weekend = int(day_of_week >= 5)
 
         # --- Operational features ---
-        t_hist = hist[hist['train_id'] == tid].copy() if 'train_id' in hist.columns else pd.DataFrame()
         if not t_hist.empty and 'date' in t_hist.columns:
             t_hist['date'] = pd.to_datetime(t_hist['date'], errors='coerce')
             t_hist_30d = t_hist[t_hist['date'] >= pd.Timestamp(today - timedelta(days=30))]
@@ -197,7 +205,6 @@ class FeatureEngineer:
             total_issues_30d = 0
             spike = 0
 
-        t_maint = maint[maint['train_id'] == tid] if 'train_id' in maint.columns else pd.DataFrame()
         high_pri = int((t_maint['priority'] == 'HIGH').sum()) if not t_maint.empty and 'priority' in t_maint.columns else 0
         open_issues = int((t_maint['status'] == 'OPEN').sum()) if not t_maint.empty and 'status' in t_maint.columns else 0
 
@@ -208,7 +215,6 @@ class FeatureEngineer:
         is_aging = int(train_age > 10)
 
         # --- Certificate features ---
-        t_certs = certs[certs['train_id'] == tid] if 'train_id' in certs.columns else pd.DataFrame()
         def days_to_expiry(cert_type):
             if t_certs.empty or 'certificate_type' not in t_certs.columns:
                 return 365

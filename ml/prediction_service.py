@@ -49,7 +49,7 @@ class PredictionService:
         self._feature_cache[train_id] = row
         return row
 
-    def predict_single_train(self, train_id):
+    def predict_single_train(self, train_id, explain=True):
         """
         Full prediction for one train.
         Returns: enriched dict with train_id, risk, explanation.
@@ -58,15 +58,20 @@ class PredictionService:
         try:
             feature_row = self._get_feature_row(train_id)
             prediction = self._predictor.predict(feature_row)
-            explanation = self._explainer.explain_prediction(feature_row)
+            
+            if explain:
+                explanation = self._explainer.explain_prediction(feature_row)
+                explanation_list = [
+                    {'feature': e[0], 'value': round(float(e[1]), 2), 'impact': round(float(e[2]), 4)}
+                    for e in explanation
+                ]
+            else:
+                explanation_list = []
 
             result = {
                 'train_id': train_id,
                 **prediction,
-                'explanation': [
-                    {'feature': e[0], 'value': round(float(e[1]), 2), 'impact': round(float(e[2]), 4)}
-                    for e in explanation
-                ],
+                'explanation': explanation_list,
                 'predicted_at': datetime.now().isoformat(),
             }
 
@@ -118,7 +123,7 @@ class PredictionService:
 
         results = []
         for tid in train_ids:
-            r = self.predict_single_train(tid)
+            r = self.predict_single_train(tid, explain=False)
             results.append({
                 'train_id': r['train_id'],
                 'risk_level': r['risk_level'],
