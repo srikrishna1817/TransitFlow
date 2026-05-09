@@ -79,7 +79,7 @@ class AdvancedMaintenancePredictor:
                 n_estimators=300, max_depth=4, learning_rate=0.05,
                 subsample=0.8, colsample_bytree=0.8,
                 use_label_encoder=False, eval_metric='logloss',
-                random_state=42, n_jobs=-1,
+                random_state=42, n_jobs=1,
             )
         return GradientBoostingClassifier(
             n_estimators=300, max_depth=3, learning_rate=0.05,
@@ -94,7 +94,7 @@ class AdvancedMaintenancePredictor:
                 subsample=0.8, colsample_bytree=0.8,
                 objective='multi:softmax', num_class=len(FAILURE_TYPES),
                 use_label_encoder=False, eval_metric='mlogloss',
-                random_state=42, n_jobs=-1,
+                random_state=42, n_jobs=1,
             )
         return GradientBoostingClassifier(n_estimators=200, max_depth=3, random_state=42)
 
@@ -104,7 +104,7 @@ class AdvancedMaintenancePredictor:
             return lgb.LGBMRegressor(
                 n_estimators=300, learning_rate=0.05, num_leaves=31,
                 subsample=0.8, colsample_bytree=0.8,
-                random_state=42, verbose=-1, n_jobs=-1,
+                random_state=42, verbose=-1, n_jobs=1,
             )
         return GradientBoostingRegressor(
             n_estimators=300, max_depth=3, learning_rate=0.05,
@@ -258,12 +258,14 @@ class AdvancedMaintenancePredictor:
         self.reg_cost.fit(X_tr, yc_tr)
 
         # ── 5-fold CV accuracy (stable, reflects true generalisation) ─────────
-        cv_scores = cross_val_score(self._classifier(), X, y_maint,
-                                    cv=5, scoring='accuracy', n_jobs=-1)
-        cv_acc = float(np.mean(cv_scores))
-        cv_f1_scores = cross_val_score(self._classifier(), X, y_maint,
-                                       cv=5, scoring='f1_weighted', n_jobs=-1)
-        cv_f1 = float(np.mean(cv_f1_scores))
+        from joblib import parallel_backend
+        with parallel_backend('sequential'):
+            cv_scores = cross_val_score(self._classifier(), X, y_maint,
+                                        cv=5, scoring='accuracy', n_jobs=None)
+            cv_acc = float(np.mean(cv_scores))
+            cv_f1_scores = cross_val_score(self._classifier(), X, y_maint,
+                                           cv=5, scoring='f1_weighted', n_jobs=None)
+            cv_f1 = float(np.mean(cv_f1_scores))
 
         # Held-out regression metrics
         ttf_mae   = float(mean_absolute_error(yt_te, self.reg_time_to_failure.predict(X_te)))
