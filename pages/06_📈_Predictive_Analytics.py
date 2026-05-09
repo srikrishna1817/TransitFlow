@@ -79,6 +79,37 @@ with tab1:
             y=data['health_data']['Health'].rolling(window=7).mean(),
             mode='lines', name='7-Day MA', line=dict(dash='dash', color='rgba(226,232,240,0.5)')
         )
+        
+        # Feature 3: Today Line, Forecast Shading, Annotations
+        today_date = data['health_data'][data['health_data']['Type'] == 'Forecast']['Date'].min()
+        max_date = data['health_data']['Date'].max()
+        final_health = data['health_data'][data['health_data']['Date'] == max_date]['Health'].values[0]
+
+        fig_health.add_vline(x=today_date, line_width=2, line_dash="dash", line_color="white",
+                             annotation_text="Today", annotation_position="top left",
+                             annotation_font=dict(color="white"))
+
+        fig_health.add_vrect(
+            x0=today_date, x1=max_date,
+            fillcolor="#3B9EFF", opacity=0.1,
+            layer="below", line_width=0
+        )
+        
+        # Dummy trace to add the shaded region to the legend
+        fig_health.add_trace(go.Scatter(
+            x=[None], y=[None],
+            mode='lines',
+            line=dict(color='rgba(59, 158, 255, 0.2)', width=10),
+            name="AI Forecast (30 days)"
+        ))
+
+        fig_health.add_annotation(
+            x=max_date, y=final_health,
+            text=f"Predicted: {final_health:.1f}",
+            showarrow=True, arrowhead=1, ax=-40, ay=-30,
+            font=dict(color="#FB923C"), arrowcolor="#FB923C"
+        )
+        
         fig_health.update_layout(height=450, hovermode='x unified')
         st.plotly_chart(fig_health, use_container_width=True)
         

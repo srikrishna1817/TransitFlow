@@ -136,6 +136,8 @@ def _init_state():
         st.session_state.stat_total_delays = 0
     if "stat_total_disruptions" not in st.session_state:
         st.session_state.stat_total_disruptions = 0
+    if "sim_events" not in st.session_state:
+        st.session_state.sim_events = []
 
 _init_state()
 
@@ -144,12 +146,18 @@ _init_state()
 # ─────────────────────────────────────────────────────────────────────────────
 def tick_trains():
     """Advance every train by one simulation tick with stochastic anomalies."""
+    from datetime import datetime
+    time_str = datetime.now().strftime("%H:%M:%S")
+    
     for t in st.session_state.sim_trains:
         n = len(t["stations"])
+        station = t["stations"][t["station_idx"]]
 
         if t["disrupted_ticks"] > 0:
             t["disrupted_ticks"] -= 1
-            if t["disrupted_ticks"] == 0: t["status"] = "On Time"
+            if t["disrupted_ticks"] == 0: 
+                t["status"] = "On Time"
+                st.session_state.sim_events.insert(0, f"<div style='color:#34D399; margin-bottom:5px; font-size:14px;'>🟢 {time_str} — {t['id']}: Disruption cleared near {station} ({t['line']} Line)</div>")
             continue 
 
         if t["skip_ticks"] > 0:
@@ -162,26 +170,34 @@ def tick_trains():
             t["disrupted_ticks"] = 3
             st.session_state.stat_disruptions[t["line"]] += 1
             st.session_state.stat_total_disruptions += 1
+            st.session_state.sim_events.insert(0, f"<div style='color:#F87171; margin-bottom:5px; font-size:14px; font-weight:bold;'>🔴 {time_str} — {t['id']}: Disruption detected near {station} ({t['line']} Line)</div>")
             continue
         elif roll < 0.15 and t["status"] == "On Time":
             t["status"] = "Delayed"
             t["skip_ticks"] = 1
             st.session_state.stat_delays[t["line"]] += 1
             st.session_state.stat_total_delays += 1
+            st.session_state.sim_events.insert(0, f"<div style='color:#FBBF24; margin-bottom:5px; font-size:14px;'>🟡 {time_str} — {t['id']}: Delay detected near {station} ({t['line']} Line)</div>")
             continue
         else:
-            if t["status"] == "Delayed": t["status"] = "On Time"
+            if t["status"] == "Delayed": 
+                t["status"] = "On Time"
+                st.session_state.sim_events.insert(0, f"<div style='color:#34D399; margin-bottom:5px; font-size:14px;'>🟢 {time_str} — {t['id']}: Delay resolved near {station} ({t['line']} Line)</div>")
 
         new_idx = t["station_idx"] + t["direction"]
         if new_idx >= n:
             t["direction"] = -1
             new_idx = n - 2
+            st.session_state.sim_events.insert(0, f"<div style='color:#34D399; margin-bottom:5px; font-size:14px;'>🟢 {time_str} — {t['id']}: Entered depot at {t['stations'][n-1]} ({t['line']} Line)</div>")
         elif new_idx < 0:
             t["direction"] = 1
             new_idx = 1
+            st.session_state.sim_events.insert(0, f"<div style='color:#34D399; margin-bottom:5px; font-size:14px;'>🟢 {time_str} — {t['id']}: Entered depot at {t['stations'][0]} ({t['line']} Line)</div>")
+            
         t["station_idx"] = new_idx
 
     st.session_state.sim_tick += 1
+    st.session_state.sim_events = st.session_state.sim_events[:8]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MAP BUILDER
@@ -284,6 +300,7 @@ with st.sidebar:
             st.session_state.stat_disruptions = {"Red": 0, "Blue": 0, "Green": 0}
             st.session_state.stat_total_delays = 0
             st.session_state.stat_total_disruptions = 0
+            st.session_state.sim_events = []
 
     st.session_state.sim_speed = st.select_slider(
         "Simulation Speed", options=["Slow", "Normal", "Fast"],
@@ -295,7 +312,12 @@ with st.sidebar:
     st.markdown(f"**Status:** {'🟢 Active Stream' if st.session_state.sim_running else '🔴 Standby'}")
 
 # Main body placeholders
-map_placeholder = st.empty()
+sim_col, log_col = st.columns([3, 1])
+with sim_col:
+    map_placeholder = st.empty()
+with log_col:
+    st.markdown("<h4 style='color:#e8f4fd; margin-bottom:10px;'>📜 Live Event Log</h4>", unsafe_allow_html=True)
+    event_log_placeholder = st.empty()
 
 # Placed directly underneath the map as requested to get it out of the side panel
 st.divider()
@@ -361,6 +383,17 @@ def render_frame():
         legend=dict(bgcolor="rgba(0,0,0,0.3)"),
     )
     stat_chart_placeholder.plotly_chart(fig_bar, use_container_width=True, key=f"b_{st.session_state.sim_tick}")
+
+    # 4. Event Log Render
+    events_html = "".join(st.session_state.sim_events)
+    if not events_html:
+        events_html = "<div style='color:#94a3b8; font-style:italic;'>No events recorded yet...</div>"
+    
+    event_log_placeholder.markdown(f"""
+    <div style="background-color:rgba(0,0,0,0.2); padding:15px; border-radius:8px; border:1px solid #1b2d3e; height:650px; overflow-y:auto;">
+        {events_html}
+    </div>
+    """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # EXECUTION

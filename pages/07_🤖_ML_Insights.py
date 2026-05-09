@@ -15,6 +15,63 @@ user = require_auth('ML_Insights')
 st.title("🤖 ML Insights — Advanced Predictive Maintenance")
 st.caption("Explainable AI | Multi-output predictions | Auto-retraining | SHAP analysis")
 
+import datetime
+from utils.db_utils import db
+
+st.divider()
+st.subheader("Model Health & Drift Status")
+
+# Fetch last trained
+last_trained = None
+try:
+    res = db.fetch_dataframe("SELECT deployed_at FROM model_deployments ORDER BY deployed_at DESC LIMIT 1")
+    if res is not None and not res.empty:
+        last_trained = pd.to_datetime(res.iloc[0]['deployed_at'])
+except:
+    pass
+
+# Statistical drift check
+stat_drift = False
+current_mean = 0
+try:
+    df_health = db.fetch_dataframe("SELECT health_score FROM trains_master")
+    if df_health is not None and not df_health.empty:
+        current_mean = df_health['health_score'].mean()
+        # Mock training distribution params for demo
+        train_mean = 75.0
+        train_std = 15.0
+        if abs(current_mean - train_mean) > 1.5 * train_std:
+            stat_drift = True
+except:
+    pass
+
+badge_col, btn_col = st.columns([3, 1])
+
+with badge_col:
+    if not last_trained:
+        st.error("🔴 **Critical Drift**: Model has never been trained or deployed.")
+    else:
+        days_since = (datetime.datetime.now() - last_trained).days
+        
+        if stat_drift:
+            st.warning(f"⚠️ **Drift Detected — Retrain Recommended** | Statistical drift: Mean shifted > 1.5 std (Current: {current_mean:.1f})")
+        elif days_since > 30:
+            st.error(f"🔴 **Critical Drift** | Last trained {days_since} days ago")
+        elif days_since > 7:
+            st.warning(f"⚠️ **Drift Detected — Retrain Recommended** | Last trained {days_since} days ago")
+        else:
+            st.success(f"✅ **Model Fresh** | Last trained {days_since} days ago")
+
+with btn_col:
+    if can_perform_action(user['role'], 'retrain_model'):
+        if st.button("🔄 Retrain Now", type="primary", key="drift_retrain_btn"):
+            with st.spinner("Training new multi-output model..."):
+                from ml.model_trainer import ModelTrainer
+                trainer = ModelTrainer()
+                new_predictor, new_metrics = trainer.train_new_model()
+                st.success("Model retrained successfully!")
+                st.cache_resource.clear()
+
 # ── Lazy-import heavy ML modules only on use ──────────────────────────────────
 @st.cache_resource
 def get_prediction_service():

@@ -53,15 +53,71 @@ try:
     
     st.divider()
     
-    st.subheader("Historical Mileage Trends (Last 90 Days)")
-    # group by date
-    hist_daily = hist_df.groupby('Date')['Kilometers_Run'].sum().reset_index()
-    hist_daily['Date'] = pd.to_datetime(hist_daily['Date'])
-    hist_daily = hist_daily.sort_values('Date')
-    fig_line = px.line(hist_daily, x='Date', y='Kilometers_Run', 
-                       title="Total Daily Kilometers Run Fleet-Wide",
-                       markers=True)
-    st.plotly_chart(fig_line, use_container_width=True)
+    col_hm, col_line = st.columns([1, 1.2])
+    
+    with col_hm:
+        st.subheader("Interchange Bottleneck Heatmap")
+        st.caption("Live train density at key network junctions.")
+        
+        station_counts = {s: 0 for s in ["Ameerpet", "Secunderabad", "JBS Parade Ground", "MGBS", "Miyapur", "LB Nagar", "Raidurg", "Nagole"]}
+        sim_trains = st.session_state.get("sim_trains", [])
+        for t in sim_trains:
+            s = t["stations"][t["station_idx"]]
+            if s in station_counts:
+                station_counts[s] += 1
+            elif "Secunderabad" in s:
+                station_counts["Secunderabad"] += 1
+            elif "MG Bus Station" in s:
+                station_counts["MGBS"] += 1
+                
+        stations_list = list(station_counts.keys())
+        counts_list = list(station_counts.values())
+        
+        z_vals = [counts_list[0:4], counts_list[4:8]]
+        text_vals = [
+            [f"{stations_list[i]}<br>{counts_list[i]} trains" for i in range(4)],
+            [f"{stations_list[i]}<br>{counts_list[i]} trains" for i in range(4, 8)]
+        ]
+        
+        colors = []
+        for c in counts_list:
+            if c <= 1: colors.append(0)
+            elif c <= 3: colors.append(1)
+            else: colors.append(2)
+        z_colors = [colors[0:4], colors[4:8]]
+        
+        import plotly.graph_objects as go
+        custom_colorscale = [[0.0, '#34D399'], [0.5, '#FBBF24'], [1.0, '#F87171']]
+        
+        fig_hm = go.Figure(data=go.Heatmap(
+            z=z_colors,
+            text=text_vals,
+            texttemplate="%{text}",
+            colorscale=custom_colorscale,
+            showscale=False,
+            zmin=0, zmax=2,
+            xgap=5, ygap=5
+        ))
+        fig_hm.update_layout(
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, autorange="reversed"),
+            height=300,
+            margin=dict(t=10, b=10, l=10, r=10),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)"
+        )
+        st.plotly_chart(fig_hm, use_container_width=True)
+
+    with col_line:
+        st.subheader("Historical Mileage Trends (Last 90 Days)")
+        # group by date
+        hist_daily = hist_df.groupby('Date')['Kilometers_Run'].sum().reset_index()
+        hist_daily['Date'] = pd.to_datetime(hist_daily['Date'])
+        hist_daily = hist_daily.sort_values('Date')
+        fig_line = px.line(hist_daily, x='Date', y='Kilometers_Run', 
+                           title="Total Daily Kilometers Run Fleet-Wide",
+                           markers=True)
+        st.plotly_chart(fig_line, use_container_width=True)
     
     st.divider()
     
