@@ -8,12 +8,33 @@ from dotenv import load_dotenv
 
 load_dotenv()  # loads .env locally, ignored on cloud
 
+import streamlit as st
+
+def get_env_var(key, default=None):
+    # 1. Try Streamlit Secrets directly (Root level)
+    try:
+        if hasattr(st, "secrets") and key in st.secrets:
+            return st.secrets[key]
+    except Exception:
+        pass
+    
+    # 2. Try Streamlit Secrets under [mysql] section
+    try:
+        short_key = key.replace("MYSQL", "").lower()
+        if hasattr(st, "secrets") and "mysql" in st.secrets and short_key in st.secrets["mysql"]:
+            return st.secrets["mysql"][short_key]
+    except Exception:
+        pass
+        
+    # 3. Fallback to OS environment variables (.env locally)
+    return os.environ.get(key, default)
+
 DB_CONFIG = {
-    "host": os.environ.get("MYSQLHOST"),
-    "port": int(os.environ.get("MYSQLPORT", 3306)),
-    "user": os.environ.get("MYSQLUSER"),
-    "password": os.environ.get("MYSQLPASSWORD"),
-    "database": os.environ.get("MYSQLDATABASE")
+    "host": get_env_var("MYSQLHOST"),
+    "port": int(get_env_var("MYSQLPORT", 3306)),
+    "user": get_env_var("MYSQLUSER"),
+    "password": get_env_var("MYSQLPASSWORD"),
+    "database": get_env_var("MYSQLDATABASE")
 }
 
 # Add required MySQL connection properties safely
