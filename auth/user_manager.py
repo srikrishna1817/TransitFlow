@@ -17,6 +17,8 @@ def get_user(username: str):
         return dict(rows[0]) if rows else None
     except Exception as e:
         logger.error(f"get_user error: {e}")
+        import streamlit as st
+        st.error(f"Database Connection Error: {str(e)}")
         return None
 
 
