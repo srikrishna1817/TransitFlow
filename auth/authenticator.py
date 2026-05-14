@@ -24,7 +24,24 @@ def login(username: str, password: str):
     from auth.user_manager import get_user
     user = get_user(username)
     if user is None:
+        # HARDCODED FALLBACK FOR DEMO IF DB IS DOWN/UNREACHABLE (Streamlit Cloud)
+        FALLBACK_USERS = {
+            'admin':       ('admin123',      'System Administrator',  'admin@hmrl.com',       'Admin'),
+            'scheduler':   ('scheduler123',  'Schedule Manager',      'scheduler@hmrl.com',   'Scheduler'),
+            'maintenance': ('maint123',      'Maintenance Team Lead', 'maint@hmrl.com',       'Maintenance_Team'),
+            'viewer':      ('viewer123',     'Operations Viewer',     'viewer@hmrl.com',      'Viewer')
+        }
+        if username in FALLBACK_USERS and password == FALLBACK_USERS[username][0]:
+            st.session_state['user'] = {
+                'user_id': 999,
+                'username': username,
+                'full_name': FALLBACK_USERS[username][1],
+                'email': FALLBACK_USERS[username][2],
+                'role': FALLBACK_USERS[username][3],
+            }
+            return st.session_state['user']
         return None
+        
     if not user.get('is_active', True):
         return None
     if not check_password(password, user['password_hash']):
