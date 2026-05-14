@@ -1,0 +1,26 @@
+Train_ID,Priority_Score,Current_Mileage,Mileage_vs_Avg,Days_Since_Maint,AI_Risk,Fitness_Valid,Critical_Jobs,Brand_Contract,Status,Assignment
+KMRL-06,60,11265,+1386 km,44,73.0%,YES,NO,No,Available,SERVICE
+KMRL-01,35,12270,+2391 km,28,64.0%,YES,NO,No,Available,SERVICE
+KMRL-02,0,5860,-4019 km,16,60.0%,NO,NO,No,Invalid fitness certificate,MAINTENANCE
+KMRL-04,0,10191,+312 km,47,89.0%,NO,NO,No,Invalid fitness certificate,MAINTENANCE
+KMRL-03,0,10390,+511 km,15,59.0%,NO,NO,No,Invalid fitness certificate,MAINTENANCE
+KMRL-05,0,10734,+855 km,51,99.0%,NO,NO,No,Invalid fitness certificate,MAINTENANCE
+KMRL-07,0,5466,-4413 km,55,96.0%,NO,NO,Yes,Invalid fitness certificate,MAINTENANCE
+KMRL-08,0,9426,-453 km,52,94.0%,NO,NO,No,Invalid fitness certificate,MAINTENANCE
+KMRL-09,0,10578,+699 km,57,94.0%,NO,NO,No,Invalid fitness certificate,MAINTENANCE
+KMRL-10,0,13322,+3443 km,3,80.0%,NO,NO,No,Invalid fitness certificate,MAINTENANCE
+KMRL-11,0,6685,-3194 km,37,61.0%,NO,NO,No,Invalid fitness certificate,MAINTENANCE
+KMRL-12,0,5769,-4110 km,51,95.0%,NO,NO,No,Invalid fitness certificate,MAINTENANCE
+KMRL-13,0,11949,+2070 km,7,62.0%,NO,NO,No,Invalid fitness certificate,MAINTENANCE
+KMRL-14,0,7433,-2446 km,21,66.0%,NO,NO,No,Invalid fitness certificate,MAINTENANCE
+KMRL-15,0,10311,+432 km,9,59.0%,NO,NO,Yes,Invalid fitness certificate,MAINTENANCE
+KMRL-16,0,10051,+172 km,39,64.0%,NO,NO,Yes,Invalid fitness certificate,MAINTENANCE
+KMRL-17,0,11420,+1541 km,18,72.0%,NO,NO,Yes,Invalid fitness certificate,MAINTENANCE
+KMRL-18,0,6184,-3695 km,4,72.0%,NO,NO,No,Invalid fitness certificate,MAINTENANCE
+KMRL-19,0,9555,-324 km,25,73.0%,NO,NO,No,Invalid fitness certificate,MAINTENANCE
+KMRL-20,0,8385,-1494 km,14,63.0%,YES,YES,No,Critical maintenance pending,MAINTENANCE
+KMRL-21,0,11396,+1517 km,50,99.0%,NO,NO,No,Invalid fitness certificate,MAINTENANCE
+KMRL-22,0,13666,+3787 km,58,94.0%,NO,NO,Yes,Invalid fitness certificate,MAINTENANCE
+KMRL-23,0,14274,+4395 km,9,74.0%,NO,NO,No,Invalid fitness certificate,MAINTENANCE
+KMRL-24,0,7558,-2321 km,26,70.0%,NO,NO,No,Invalid fitness certificate,MAINTENANCE
+KMRL-25,0,12849,+2970 km,53,98.0%,NO,NO,Yes,Invalid fitness certificate,MAINTENANCE

@@ -1,0 +1,121 @@
+crew_id,name,designation,experience_years,home_depot,certified_routes,on_leave,weekly_hours,max_hours_per_shift,shift_type
+CR-001,Crew Member 1,Technician,4,Miyapur,"Green Line,Red Line",False,41,8,Day
+CR-002,Crew Member 2,Co-Driver,1,Miyapur,Green Line,False,40,8,Night
+CR-003,Crew Member 3,Technician,8,Miyapur,"Red Line,Green Line",False,44,8,Evening
+CR-004,Crew Member 4,Driver,1,Uppal,Blue Line,True,0,8,Evening
+CR-005,Crew Member 5,Driver,18,Uppal,"Green Line,Red Line,Blue Line",False,47,8,Night
+CR-006,Crew Member 6,Co-Driver,3,JBS,Green Line,False,45,8,Night
+CR-007,Crew Member 7,Driver,3,Miyapur,Red Line,False,41,8,Evening
+CR-008,Crew Member 8,Guard,3,Uppal,Red Line,False,45,8,Night
+CR-009,Crew Member 9,Technician,19,Miyapur,"Green Line,Red Line,Blue Line",False,42,8,Evening
+CR-010,Crew Member 10,Co-Driver,3,JBS,Red Line,False,45,8,Day
+CR-011,Crew Member 11,Technician,15,Uppal,"Green Line,Blue Line,Red Line",True,0,8,Evening
+CR-012,Crew Member 12,Technician,19,Uppal,"Red Line,Blue Line,Green Line",False,42,8,Evening
+CR-013,Crew Member 13,Co-Driver,1,JBS,Red Line,False,40,8,Night
+CR-014,Crew Member 14,Technician,3,Uppal,Blue Line,False,46,8,Night
+CR-015,Crew Member 15,Guard,3,Miyapur,Green Line,False,41,8,Night
+CR-016,Crew Member 16,Driver,6,Miyapur,"Green Line,Red Line",False,44,8,Night
+CR-017,Crew Member 17,Co-Driver,3,JBS,Blue Line,False,42,8,Night
+CR-018,Crew Member 18,Guard,17,Miyapur,"Red Line,Green Line,Blue Line",False,47,8,Day
+CR-019,Crew Member 19,Driver,3,Miyapur,Blue Line,True,0,8,Night
+CR-020,Crew Member 20,Co-Driver,5,JBS,"Green Line,Blue Line",False,48,8,Night
+CR-021,Crew Member 21,Driver,5,Uppal,"Blue Line,Green Line",False,45,8,Day
+CR-022,Crew Member 22,Co-Driver,2,Miyapur,Green Line,False,43,8,Day
+CR-023,Crew Member 23,Driver,3,Miyapur,Blue Line,False,40,8,Night
+CR-024,Crew Member 24,Technician,3,Uppal,Green Line,False,42,8,Day
+CR-025,Crew Member 25,Guard,7,Miyapur,Blue Line,True,0,8,Evening
+CR-026,Crew Member 26,Co-Driver,4,Miyapur,Red Line,False,45,8,Day
+CR-027,Crew Member 27,Co-Driver,2,Miyapur,Blue Line,False,44,8,Day
+CR-028,Crew Member 28,Driver,8,Miyapur,Red Line,False,48,8,Day
+CR-029,Crew Member 29,Co-Driver,2,Uppal,Red Line,False,46,8,Evening
+CR-030,Crew Member 30,Technician,2,Uppal,Blue Line,False,47,8,Night
+CR-031,Crew Member 31,Driver,17,JBS,"Red Line,Blue Line,Green Line",False,42,8,Night
+CR-032,Crew Member 32,Driver,4,Miyapur,"Blue Line,Red Line",True,0,8,Night
+CR-033,Crew Member 33,Driver,1,Miyapur,Blue Line,False,43,8,Night
+CR-034,Crew Member 34,Guard,3,Miyapur,Green Line,False,46,8,Evening
+CR-035,Crew Member 35,Guard,3,Uppal,Red Line,False,46,8,Evening
+CR-036,Crew Member 36,Co-Driver,4,Uppal,Red Line,False,41,8,Night
+CR-037,Crew Member 37,Co-Driver,2,Miyapur,Blue Line,False,45,8,Evening
+CR-038,Crew Member 38,Co-Driver,20,Uppal,"Red Line,Blue Line,Green Line",False,48,8,Evening
+CR-039,Crew Member 39,Co-Driver,1,JBS,Blue Line,False,44,8,Night
+CR-040,Crew Member 40,Guard,6,Uppal,"Red Line,Blue Line",False,40,8,Day
+CR-041,Crew Member 41,Technician,1,JBS,Green Line,False,42,8,Night
+CR-042,Crew Member 42,Co-Driver,8,Miyapur,Green Line,True,0,8,Night
+CR-043,Crew Member 43,Driver,2,JBS,Red Line,False,46,8,Evening
+CR-044,Crew Member 44,Co-Driver,4,Miyapur,"Blue Line,Green Line",False,41,8,Day
+CR-045,Crew Member 45,Co-Driver,11,Uppal,"Green Line,Blue Line,Red Line",True,0,8,Evening
+CR-046,Crew Member 46,Co-Driver,3,Miyapur,Blue Line,False,40,8,Day
+CR-047,Crew Member 47,Technician,16,Uppal,"Red Line,Green Line,Blue Line",False,43,8,Evening
+CR-048,Crew Member 48,Guard,1,Uppal,Blue Line,False,48,8,Day
+CR-049,Crew Member 49,Driver,2,Miyapur,Red Line,False,44,8,Night
+CR-050,Crew Member 50,Guard,6,JBS,"Blue Line,Red Line",False,41,8,Day
+CR-051,Crew Member 51,Guard,4,Uppal,Green Line,False,45,8,Night
+CR-052,Crew Member 52,Co-Driver,20,Uppal,"Blue Line,Green Line,Red Line",False,46,8,Day
+CR-053,Crew Member 53,Driver,7,JBS,Green Line,False,46,8,Evening
+CR-054,Crew Member 54,Technician,2,JBS,Blue Line,False,45,8,Evening
+CR-055,Crew Member 55,Driver,8,JBS,"Blue Line,Green Line",False,41,8,Day
+CR-056,Crew Member 56,Technician,5,Miyapur,Red Line,True,0,8,Night
+CR-057,Crew Member 57,Technician,10,Uppal,"Green Line,Blue Line,Red Line",False,43,8,Day
+CR-058,Crew Member 58,Co-Driver,3,Miyapur,Blue Line,False,41,8,Day
+CR-059,Crew Member 59,Co-Driver,20,JBS,"Red Line,Green Line,Blue Line",False,48,8,Evening
+CR-060,Crew Member 60,Co-Driver,8,Uppal,"Blue Line,Green Line",False,48,8,Night
+CR-061,Crew Member 61,Guard,16,Uppal,"Green Line,Blue Line,Red Line",False,44,8,Evening
+CR-062,Crew Member 62,Driver,2,Miyapur,Green Line,False,45,8,Day
+CR-063,Crew Member 63,Technician,2,JBS,Red Line,False,43,8,Evening
+CR-064,Crew Member 64,Technician,7,Miyapur,"Blue Line,Red Line",False,46,8,Evening
+CR-065,Crew Member 65,Co-Driver,2,Uppal,Green Line,False,46,8,Evening
+CR-066,Crew Member 66,Technician,2,Uppal,Blue Line,True,0,8,Night
+CR-067,Crew Member 67,Technician,2,Miyapur,Red Line,False,48,8,Night
+CR-068,Crew Member 68,Driver,4,JBS,Red Line,False,47,8,Evening
+CR-069,Crew Member 69,Guard,5,Uppal,"Blue Line,Green Line",False,46,8,Day
+CR-070,Crew Member 70,Driver,8,Uppal,Green Line,False,41,8,Day
+CR-071,Crew Member 71,Co-Driver,12,Miyapur,"Red Line,Blue Line,Green Line",False,43,8,Evening
+CR-072,Crew Member 72,Guard,6,JBS,Red Line,False,41,8,Day
+CR-073,Crew Member 73,Driver,6,Uppal,"Red Line,Green Line",False,43,8,Night
+CR-074,Crew Member 74,Technician,8,JBS,Green Line,False,45,8,Night
+CR-075,Crew Member 75,Guard,8,Miyapur,"Red Line,Blue Line",False,47,8,Night
+CR-076,Crew Member 76,Technician,16,JBS,"Green Line,Blue Line,Red Line",False,42,8,Evening
+CR-077,Crew Member 77,Co-Driver,18,Uppal,"Red Line,Blue Line,Green Line",False,43,8,Evening
+CR-078,Crew Member 78,Co-Driver,7,Miyapur,"Red Line,Blue Line",False,45,8,Evening
+CR-079,Crew Member 79,Co-Driver,6,JBS,"Green Line,Red Line",False,44,8,Day
+CR-080,Crew Member 80,Technician,2,Uppal,Green Line,False,43,8,Night
+CR-081,Crew Member 81,Co-Driver,7,Miyapur,Green Line,False,46,8,Evening
+CR-082,Crew Member 82,Guard,6,JBS,"Green Line,Blue Line",False,46,8,Night
+CR-083,Crew Member 83,Co-Driver,6,Miyapur,"Blue Line,Red Line",False,43,8,Day
+CR-084,Crew Member 84,Guard,2,Uppal,Green Line,False,48,8,Day
+CR-085,Crew Member 85,Driver,13,Miyapur,"Red Line,Green Line,Blue Line",False,44,8,Day
+CR-086,Crew Member 86,Technician,5,Miyapur,"Blue Line,Green Line",False,44,8,Evening
+CR-087,Crew Member 87,Driver,1,Uppal,Red Line,False,47,8,Evening
+CR-088,Crew Member 88,Co-Driver,8,Miyapur,Red Line,False,44,8,Day
+CR-089,Crew Member 89,Technician,7,JBS,Blue Line,False,47,8,Evening
+CR-090,Crew Member 90,Driver,4,Miyapur,Green Line,False,44,8,Day
+CR-091,Crew Member 91,Technician,3,Miyapur,Blue Line,False,46,8,Evening
+CR-092,Crew Member 92,Co-Driver,2,JBS,Red Line,False,47,8,Evening
+CR-093,Crew Member 93,Co-Driver,8,Uppal,Red Line,True,0,8,Evening
+CR-094,Crew Member 94,Driver,10,Miyapur,"Green Line,Blue Line,Red Line",False,44,8,Evening
+CR-095,Crew Member 95,Technician,7,JBS,"Red Line,Green Line",False,47,8,Night
+CR-096,Crew Member 96,Guard,6,Miyapur,Green Line,False,40,8,Night
+CR-097,Crew Member 97,Co-Driver,1,Uppal,Blue Line,False,47,8,Night
+CR-098,Crew Member 98,Driver,7,Uppal,Blue Line,False,45,8,Day
+CR-099,Crew Member 99,Driver,7,JBS,"Red Line,Blue Line",False,48,8,Evening
+CR-100,Crew Member 100,Technician,1,Uppal,Green Line,False,40,8,Evening
+CR-101,Crew Member 101,Technician,3,Uppal,Green Line,False,47,8,Day
+CR-102,Crew Member 102,Technician,3,Miyapur,Green Line,False,47,8,Day
+CR-103,Crew Member 103,Driver,3,JBS,Blue Line,False,42,8,Night
+CR-104,Crew Member 104,Guard,5,Uppal,Blue Line,False,42,8,Night
+CR-105,Crew Member 105,Co-Driver,7,Uppal,"Red Line,Blue Line",False,48,8,Night
+CR-106,Crew Member 106,Guard,5,Uppal,Blue Line,False,46,8,Day
+CR-107,Crew Member 107,Technician,2,JBS,Red Line,False,47,8,Night
+CR-108,Crew Member 108,Technician,6,Uppal,"Green Line,Red Line",False,43,8,Day
+CR-109,Crew Member 109,Co-Driver,15,Miyapur,"Green Line,Blue Line,Red Line",False,47,8,Evening
+CR-110,Crew Member 110,Technician,11,JBS,"Red Line,Blue Line,Green Line",False,45,8,Day
+CR-111,Crew Member 111,Technician,7,Miyapur,Blue Line,False,44,8,Night
+CR-112,Crew Member 112,Technician,2,JBS,Blue Line,False,46,8,Night
+CR-113,Crew Member 113,Driver,1,Miyapur,Red Line,False,44,8,Evening
+CR-114,Crew Member 114,Driver,19,JBS,"Red Line,Blue Line,Green Line",False,47,8,Evening
+CR-115,Crew Member 115,Co-Driver,6,Uppal,"Green Line,Blue Line",False,43,8,Day
+CR-116,Crew Member 116,Co-Driver,3,Uppal,Blue Line,False,43,8,Day
+CR-117,Crew Member 117,Driver,6,Uppal,"Blue Line,Red Line",False,47,8,Evening
+CR-118,Crew Member 118,Guard,18,Uppal,"Green Line,Blue Line,Red Line",False,46,8,Day
+CR-119,Crew Member 119,Driver,16,Miyapur,"Green Line,Blue Line,Red Line",False,45,8,Night
+CR-120,Crew Member 120,Guard,4,JBS,Red Line,False,44,8,Day

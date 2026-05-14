@@ -5,7 +5,7 @@
 models/*.pkl
 
 # Legacy data
-data/*.csv
+# (Removed data/*.csv so offline fallback files can be pushed to Streamlit Cloud)
 
 # Generated PDF reports
 reports/*.pdf

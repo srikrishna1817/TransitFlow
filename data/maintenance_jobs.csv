@@ -1,0 +1,40 @@
+Train_ID,Job_Card_ID,Status,Priority,Failure_Type,Issue_Description,Estimated_Hours,Cost_INR,reported_date,actual_completion_date
+HMRL-01,JC-4910,Closed,Medium,Door Mechanism,Door Mechanism Repair,10,84179,2026-04-29,2026-05-05
+HMRL-01,JC-2188,Open,Medium,Structural,Structural Integrity Check,2,514569,2026-04-21,
+HMRL-07,JC-8179,Open,Low,Brake System,Brake System Inspection Required,19,78412,2026-04-24,
+HMRL-08,JC-5905,Closed,Medium,Routine,Scheduled Routine Maintenance,23,54664,2026-05-05,2026-05-14
+HMRL-08,JC-3546,In Progress,High,Electrical/Power,Electrical Fault Investigation,10,387984,2026-05-02,
+HMRL-08,JC-9280,Closed,Medium,Electrical/Power,Electrical Fault Investigation,17,299768,2026-04-29,2026-05-04
+HMRL-10,JC-3647,Closed,Low,Brake System,Brake System Inspection Required,16,56324,2026-04-25,2026-04-30
+HMRL-13,JC-3426,Open,Low,Signaling,Signaling Fault Diagnosis,15,118222,2026-04-09,
+HMRL-13,JC-1653,In Progress,High,Door Mechanism,Door Mechanism Repair,13,146692,2026-04-07,
+HMRL-16,JC-4878,Open,Low,HVAC/Climate,HVAC System Service,7,119945,2026-04-12,
+HMRL-16,JC-6442,Closed,Low,Routine,Scheduled Routine Maintenance,15,22122,2026-04-07,2026-04-10
+HMRL-20,JC-8541,Closed,High,Routine,Scheduled Routine Maintenance,13,33805,2026-04-08,2026-04-12
+HMRL-20,JC-4164,Open,Medium,Routine,Scheduled Routine Maintenance,14,34915,2026-04-28,
+HMRL-23,JC-9785,In Progress,Medium,Signaling,Signaling Fault Diagnosis,12,359546,2026-04-14,
+HMRL-23,JC-1626,Closed,Low,Brake System,Brake System Inspection Required,5,79965,2026-04-30,2026-05-05
+HMRL-25,JC-2894,In Progress,Low,Door Mechanism,Door Mechanism Repair,14,75039,2026-04-16,
+HMRL-25,JC-9518,Closed,Low,Electrical/Power,Electrical Fault Investigation,19,177482,2026-05-04,2026-05-05
+HMRL-27,JC-6409,Open,Low,Electrical/Power,Electrical Fault Investigation,21,217669,2026-04-22,
+HMRL-27,JC-9308,In Progress,Medium,Routine,Scheduled Routine Maintenance,11,28167,2026-04-12,
+HMRL-27,JC-3085,Open,Low,Door Mechanism,Door Mechanism Repair,8,71920,2026-04-13,
+HMRL-28,JC-9977,Open,Low,Electrical/Power,Electrical Fault Investigation,2,309894,2026-04-17,
+HMRL-30,JC-9375,Closed,Low,Door Mechanism,Door Mechanism Repair,17,77662,2026-04-21,2026-04-25
+HMRL-30,JC-9445,Open,Low,Routine,Scheduled Routine Maintenance,23,21784,2026-04-14,
+HMRL-33,JC-5011,Open,Medium,Routine,Scheduled Routine Maintenance,17,33050,2026-05-01,
+HMRL-33,JC-4185,Closed,Low,Routine,Scheduled Routine Maintenance,24,17340,2026-04-21,2026-05-01
+HMRL-33,JC-1090,Open,Low,HVAC/Climate,HVAC System Service,5,99668,2026-04-28,
+HMRL-35,JC-2988,In Progress,Medium,Brake System,Brake System Inspection Required,16,153060,2026-04-28,
+HMRL-35,JC-6198,In Progress,High,HVAC/Climate,HVAC System Service,16,266250,2026-04-19,
+HMRL-43,JC-8939,Closed,Medium,Routine,Scheduled Routine Maintenance,22,36203,2026-04-09,2026-04-18
+HMRL-43,JC-5451,Open,Medium,HVAC/Climate,HVAC System Service,12,100155,2026-04-13,
+HMRL-44,JC-2052,Closed,High,Electrical/Power,Electrical Fault Investigation,15,361870,2026-04-23,2026-04-27
+HMRL-44,JC-7883,Open,Medium,Signaling,Signaling Fault Diagnosis,14,394278,2026-04-22,
+HMRL-52,JC-4613,Closed,Low,Routine,Scheduled Routine Maintenance,17,33222,2026-04-18,2026-04-27
+HMRL-52,JC-7624,Open,Medium,HVAC/Climate,HVAC System Service,7,153654,2026-05-05,
+HMRL-55,JC-8022,Closed,Medium,HVAC/Climate,HVAC System Service,6,167580,2026-04-17,2026-04-19
+HMRL-55,JC-4467,Open,Low,Electrical/Power,Electrical Fault Investigation,16,102454,2026-04-27,
+HMRL-55,JC-5133,Closed,Medium,Routine,Scheduled Routine Maintenance,4,44846,2026-04-27,2026-05-04
+HMRL-58,JC-4266,Closed,Medium,Brake System,Brake System Inspection Required,2,165426,2026-05-04,2026-05-08
+HMRL-60,JC-3749,Closed,Low,Signaling,Signaling Fault Diagnosis,21,184993,2026-04-21,2026-04-27
