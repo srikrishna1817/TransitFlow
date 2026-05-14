@@ -14,16 +14,22 @@ import datetime
 from utils.db_utils import db
 import logging
 
+import os
+
 # ── Module-level CSV fallback cache (loaded once per process) ─────────────────
 _csv_cache = {}
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 def _csv(path):
-    if path not in _csv_cache:
+    full_path = os.path.join(BASE_DIR, path)
+    if full_path not in _csv_cache:
         try:
-            _csv_cache[path] = pd.read_csv(path)
-        except Exception:
-            _csv_cache[path] = pd.DataFrame()
-    return _csv_cache[path].copy()
+            _csv_cache[full_path] = pd.read_csv(full_path)
+        except Exception as e:
+            logging.error(f"Failed to load CSV {full_path}: {e}")
+            _csv_cache[full_path] = pd.DataFrame()
+    return _csv_cache[full_path].copy()
 
 # ── Data loaders ─────────────────────────────────────────────────────────────
 

@@ -37,7 +37,7 @@ st.markdown("""
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-top: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 24px;
-      padding: 3rem 2.5rem;
+      padding: 2.5rem 2rem;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(59, 130, 246, 0.2);
       margin-top: 5vh;
       position: relative;
@@ -127,7 +127,7 @@ st.markdown("""
 # ── Layout ────────────────────────────────────────────────────────────────────
 st.markdown("<div style='height: 5vh;'></div>", unsafe_allow_html=True)
 
-col_l, col_m, col_r = st.columns([1, 1.8, 1])
+col_l, col_m, col_r = st.columns([1.5, 1.2, 1.5])
 with col_m:
     # We target the column directly with CSS
     

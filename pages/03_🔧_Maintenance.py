@@ -22,8 +22,10 @@ with st.spinner("🔄 Loading maintenance jobs..."):
     try:
         maint_df = load_maintenance_jobs()
     except Exception:
-        if os.path.exists("data/maintenance_jobs.csv"):
-            maint_df = pd.read_csv("data/maintenance_jobs.csv")
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        csv_path = os.path.join(BASE_DIR, "data/maintenance_jobs.csv")
+        if os.path.exists(csv_path):
+            maint_df = pd.read_csv(csv_path)
         else:
             maint_df = None
 

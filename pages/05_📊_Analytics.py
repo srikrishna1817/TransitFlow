@@ -23,10 +23,12 @@ def load_all_data():
     try:
         return load_trains_data(), load_historical_operations(), load_certificates_data()
     except Exception:
+        import os
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         return (
-            pd.read_csv("data/trains_master.csv"),
-            pd.read_csv("data/historical_operations.csv"),
-            pd.read_csv("data/fitness_certificates.csv")
+            pd.read_csv(os.path.join(BASE_DIR, "data/trains_master.csv")),
+            pd.read_csv(os.path.join(BASE_DIR, "data/historical_operations.csv")),
+            pd.read_csv(os.path.join(BASE_DIR, "data/fitness_certificates.csv"))
         )
 
 @st.cache_data(ttl=600)

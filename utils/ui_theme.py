@@ -217,9 +217,7 @@ def get_custom_css():
         .hero-title {
             font-size: 2.5rem;
             font-weight: 800;
-            background: linear-gradient(to right, #60A5FA, #A78BFA);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: #60A5FA;
             margin: 0 0 10px 0;
         }
         .hero-subtitle {

@@ -59,25 +59,32 @@ class DatabaseManager:
         self.config = conn_config
         self.connection = None
         self.engine = None
+        self.unreachable = False
         
     def connect(self):
         """Create MySQL connection using mysql.connector"""
+        if self.unreachable:
+            return None
         try:
             if not self.connection or not self.connection.is_connected():
                 self.connection = mysql.connector.connect(**self.config)
             return self.connection
         except Error as e:
-            logging.error(f"Error connecting to MySQL: {e}")
+            self.unreachable = True
+            logging.error(f"Error connecting to MySQL (Marked Unreachable): {e}")
             return None
 
     def get_sqlalchemy_engine(self):
         """Return SQLAlchemy engine for pandas operations"""
+        if self.unreachable:
+            return None
         try:
             if not self.engine:
                 self.engine = create_engine(SQLALCHEMY_DATABASE_URL)
             return self.engine
         except Exception as e:
-            logging.error(f"Error creating SQLAlchemy engine: {e}")
+            self.unreachable = True
+            logging.error(f"Error creating SQLAlchemy engine (Marked Unreachable): {e}")
             return None
 
     def close(self):

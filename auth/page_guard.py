@@ -42,17 +42,20 @@ def _render_sidebar(user):
 
     st.sidebar.markdown(f"""
 <div style="
-    background:linear-gradient(135deg,#0d1b2a,#1b2d3e);
-    border-radius:12px;padding:12px 14px;margin-bottom:10px;
-    border-left:4px solid {role_color};
+    background:linear-gradient(135deg, rgba(13,27,42,0.8), rgba(27,45,62,0.8));
+    border-radius:12px;
+    padding:12px 14px;
+    margin-bottom:10px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-top: 3px solid {role_color};
 ">
-  <div style="font-size:1.1rem;font-weight:700;color:#e8f4fd;">
-    👤 {user['full_name']}
+  <div style="font-size:1.1rem;font-weight:700;color:#e8f4fd; display: flex; align-items: center; gap: 8px;">
+    👤 <span>{user['full_name']}</span>
   </div>
-  <div style="font-size:0.8rem;color:#94a3b8;">@{user['username']}</div>
-  <div style="margin-top:6px;">
-    <span style="background:{role_color};color:white;padding:2px 9px;
-                 border-radius:10px;font-size:0.76rem;font-weight:600;">
+  <div style="font-size:0.8rem;color:#94a3b8; margin-top: 2px;">@{user['username']}</div>
+  <div style="margin-top:8px;">
+    <span style="background: {role_color}20; border: 1px solid {role_color}60; color: {role_color}; padding:3px 10px;
+                 border-radius:12px;font-size:0.75rem;font-weight:700;letter-spacing:0.5px;">
       {role_label}
     </span>
   </div>
