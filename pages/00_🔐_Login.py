@@ -127,7 +127,7 @@ st.markdown("""
 # ── Layout ────────────────────────────────────────────────────────────────────
 st.markdown("<div style='height: 5vh;'></div>", unsafe_allow_html=True)
 
-col_l, col_m, col_r = st.columns([1.5, 1.2, 1.5])
+col_l, col_m, col_r = st.columns([1, 1.5, 1])
 with col_m:
     # We target the column directly with CSS
     
