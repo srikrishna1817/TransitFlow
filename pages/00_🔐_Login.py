@@ -25,9 +25,12 @@ st.markdown("""
   [data-testid="collapsedControl"] { display: none; }
   header { visibility: hidden; }
   footer { visibility: hidden; }
+  
+  /* Hide the 'Press Enter to apply' text in text inputs */
+  div[data-testid="InputInstructions"] { display: none !important; }
 
   /* Premium Glassmorphism Container */
-  .login-container {
+  [data-testid="column"]:nth-of-type(2) {
       background: rgba(15, 23, 42, 0.4);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
@@ -42,7 +45,7 @@ st.markdown("""
   }
   
   /* Glowing accent line at top */
-  .login-container::before {
+  [data-testid="column"]:nth-of-type(2)::before {
       content: '';
       position: absolute;
       top: 0; left: 0; right: 0; height: 3px;
@@ -126,8 +129,7 @@ st.markdown("<div style='height: 5vh;'></div>", unsafe_allow_html=True)
 
 col_l, col_m, col_r = st.columns([1, 1.8, 1])
 with col_m:
-    # We use st.container to wrap the content and target it with CSS
-    st.markdown('<div class="login-container">', unsafe_allow_html=True)
+    # We target the column directly with CSS
     
     st.markdown('<div class="hmrl-logo">🚄</div>', unsafe_allow_html=True)
     st.markdown('<div class="hmrl-title">TransitFlow</div>', unsafe_allow_html=True)
@@ -174,4 +176,4 @@ with col_m:
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+

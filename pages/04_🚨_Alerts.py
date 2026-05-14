@@ -8,14 +8,18 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from auth.page_guard import require_auth
 
+from utils.ui_theme import apply_theme
+
 # Page Config
 st.set_page_config(page_title="Alerts Dashboard", page_icon="🚨", layout="wide", initial_sidebar_state="collapsed")
+apply_theme()
 user = require_auth('Alerts')
 
 # Header
 st.title("🚨 Real-Time Alerts & Notifications")
+st.caption("Automated scans of certificate expiry, maintenance overdue, mileage limits, and fleet capacity.")
 curr_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-st.caption(f"Last System Scan: {curr_time}")
+st.divider()
 
 # --- DATA SCANNING ENGINE ---
 @st.cache_data(ttl=120)
@@ -74,8 +78,6 @@ def scan_for_alerts():
                 'Train_ID': 'FLEET-WIDE', 'Description': f"Only {active_count} trains active. Required: 30.",
                 'Action': 'Activate emergency fleet protocol', 'Timestamp': 'N/A'})
 
-        schedule_df = pd.DataFrame()  # no longer computed here
-
         # Synchronize with Database to avoid endless duplicates
         db_alerts_now = get_active_alerts()
         existing_descs = db_alerts_now['description'].tolist() if db_alerts_now is not None and not db_alerts_now.empty else []
@@ -93,13 +95,22 @@ def scan_for_alerts():
             mapping = {'severity': 'Severity', 'category': 'Category', 'train_id': 'Train_ID', 'description': 'Description', 'id': 'Alert_ID'}
             db_alerts = db_alerts.rename(columns=mapping)
 
+        # Sort by severity: CRITICAL first, then WARNING, then INFO
+        sev_order = {'CRITICAL': 0, 'WARNING': 1, 'INFO': 2}
+        if db_alerts is not None and not db_alerts.empty and 'Severity' in db_alerts.columns:
+            db_alerts['_sev_order'] = db_alerts['Severity'].map(sev_order).fillna(3)
+            db_alerts = db_alerts.sort_values('_sev_order').drop(columns=['_sev_order'])
+
         return db_alerts, trains_df
     except Exception as e:
-        st.error(f"Scan failed: {e}")
+        st.error(f"⚠️ Scan failed: {e}")
         return pd.DataFrame(), pd.DataFrame()
 
 # Execute Scan
-alert_data, trains_df = scan_for_alerts()
+with st.spinner("🔍 Scanning fleet for alerts..."):
+    alert_data, trains_df = scan_for_alerts()
+
+st.caption(f"Last System Scan: {curr_time}")
 
 if alert_data is None or alert_data.empty:
     st.success("✅ System check complete. No active health alerts found.")
@@ -108,7 +119,8 @@ else:
     crit_count = len(alert_data[alert_data['Severity'] == 'CRITICAL'])
     warn_count = len(alert_data[alert_data['Severity'] == 'WARNING'])
     info_count = len(alert_data[alert_data['Severity'] == 'INFO'])
-    healthy_pct = int(((len(trains_df) - crit_count) / len(trains_df)) * 100)
+    crit_trains_count = alert_data[alert_data['Severity'] == 'CRITICAL']['Train_ID'].nunique()
+    healthy_pct = max(0, int(((len(trains_df) - crit_trains_count) / len(trains_df)) * 100)) if len(trains_df) > 0 else 100
 
     mcol1, mcol2, mcol3, mcol4 = st.columns(4)
     mcol1.metric("🔴 Critical", crit_count)
@@ -122,16 +134,19 @@ else:
     t1, t2, t3, t4 = st.tabs(["🔴 Critical", "🟠 Warnings", "🟡 Informational", "📊 All Alerts"])
 
     with t1:
-        st.subheader("Massive Action Required")
+        st.subheader("Immediate Action Required")
         crit_alerts = alert_data[alert_data['Severity'] == 'CRITICAL']
         if crit_alerts is not None and not crit_alerts.empty:
             for cat in crit_alerts['Category'].unique():
                 with st.expander(f"❌ {cat}", expanded=True):
-                    st.dataframe(crit_alerts[crit_alerts['Category'] == cat], use_container_width=True)
+                    cat_df = crit_alerts[crit_alerts['Category'] == cat]
+                    st.dataframe(cat_df.head(10), use_container_width=True, hide_index=True)
+                    with st.expander("Show all"):
+                        st.dataframe(cat_df, use_container_width=True, hide_index=True)
                     if st.button(f"Ground all {cat} trains", key=f"btn_{cat}"):
-                        st.info("Broadcast signal sent to ground control...")
+                        st.info("ℹ️ Broadcast signal sent to ground control...")
         else:
-            st.success("No active critical alerts.")
+            st.success("✅ No active critical alerts.")
 
     with t2:
         st.subheader("Operational Warnings")
@@ -139,17 +154,19 @@ else:
         if warn_alerts is not None and not warn_alerts.empty:
             for cat in warn_alerts['Category'].unique():
                 with st.expander(f"⚠️ {cat}"):
-                    st.table(warn_alerts[warn_alerts['Category'] == cat])
+                    st.dataframe(warn_alerts[warn_alerts['Category'] == cat].head(10), use_container_width=True, hide_index=True)
         else:
-            st.success("No active warnings.")
+            st.success("✅ No active warnings.")
 
     with t3:
         st.subheader("System Awareness")
         inf_alerts = alert_data[alert_data['Severity'] == 'INFO']
         if inf_alerts is not None and not inf_alerts.empty:
-            st.dataframe(inf_alerts, use_container_width=True)
+            st.dataframe(inf_alerts.head(10), use_container_width=True, hide_index=True)
+            with st.expander("Show all informational"):
+                st.dataframe(inf_alerts, use_container_width=True, hide_index=True)
         else:
-            st.info("No informational alerts.")
+            st.info("ℹ️ No informational alerts.")
 
     with t4:
         st.subheader("Master Alert Log")
@@ -163,7 +180,9 @@ else:
                 (filtered_log['Category'].str.contains(search, case=False))
             ]
         
-        st.dataframe(filtered_log, use_container_width=True)
+        st.dataframe(filtered_log.head(10), use_container_width=True, hide_index=True)
+        with st.expander("Show all alerts"):
+            st.dataframe(filtered_log, use_container_width=True, hide_index=True)
         
         if 'Alert_ID' in filtered_log.columns and filtered_log is not None and not filtered_log.empty:
             st.divider()
@@ -173,11 +192,11 @@ else:
                 from utils.data_loader import acknowledge_alert
                 success = acknowledge_alert(ack_id, acknowledged_by="System Admin")
                 if success:
-                    st.success(f"Alert {ack_id} was successfully acknowledged/resolved.")
+                    st.success(f"✅ Alert {ack_id} was successfully acknowledged/resolved.")
                     st.cache_data.clear()
                     st.rerun()
                 else:
-                    st.warning("Could not close alert due to a database exception - please retry.")
+                    st.warning("⚠️ Could not close alert due to a database exception - please retry.")
         
         # Export
         csv = filtered_log.to_csv(index=False).encode('utf-8')
@@ -188,8 +207,6 @@ st.divider()
 st.subheader("⚡ Top Active Alerts Requiring Attention")
 
 if alert_data is not None and not alert_data.empty:
-    # Show top 3 critical alerts first, then warnings
-    top_alerts = pd.DataFrame()
     crit_subset = alert_data[alert_data['Severity'] == 'CRITICAL'].head(3)
     warn_subset = alert_data[alert_data['Severity'] == 'WARNING'].head(3)
     
@@ -202,6 +219,9 @@ if alert_data is not None and not alert_data.empty:
             st.warning(f"🟠 **[{row.get('Category', 'Alert')}]** {row.get('Train_ID', '')} — {row.get('Description', '')}")
     
     if crit_subset.empty and warn_subset.empty:
-        st.success("No critical or warning alerts active.")
+        st.success("✅ No critical or warning alerts active.")
 else:
-    st.success("No alerts to display.")
+    st.success("✅ No alerts to display.")
+
+from components.custom_widgets import render_page_nav
+render_page_nav('pages/03_🔧_Maintenance.py', '🔧 Maintenance', 'pages/05_📊_Analytics.py', '📊 Analytics')

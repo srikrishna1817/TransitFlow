@@ -17,7 +17,7 @@ from advanced_scheduling.crew_scheduler import assign_crew_to_trains
 from advanced_scheduling.scenario_analyzer import simulate_train_breakdown, analyze_interchange_disruption, optimize_for_event
 from advanced_scheduling.multi_day_planner import generate_weekly_schedule
 
-st.set_page_config(page_title="HMRL Schedule Planner", page_icon="📅", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Schedule Planner", page_icon="📅", layout="wide", initial_sidebar_state="collapsed")
 user = require_auth('Schedule')
 
 apply_theme()
@@ -110,6 +110,8 @@ def perform_scenario_analysis(scenario, schedule_df):
 
 
 st.title("📅 Daily Schedule Planning & Analytics")
+st.caption("AI-powered daily schedule generation, route optimization, crew assignment, and scenario analysis.")
+st.divider()
 
 # ===== SIDEBAR CONTROLS =====
 st.sidebar.header("⚙ Scheduling Controls")
@@ -129,6 +131,10 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("🤔 What-if Scenario")
 st.sidebar.caption("Simulate unexpected failures to test resilience.")
 breakdowns = st.sidebar.number_input("Simulate Breakdowns", min_value=0, max_value=10, value=0)
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("🧠 Optimization Engine")
+optimization_mode = st.radio("Select Algorithm", ["⚡ Fast Mode (Greedy)", "🧬 GA Mode (DEAP)"], horizontal=False, label_visibility="collapsed")
 
 if st.button("🚀 Generate Schedule & Analytics", type="primary"):
     loading_overlay("Running Advanced AI Engine and Simulating Routing Configurations...")
@@ -215,6 +221,15 @@ if 'generated_schedule_df' in st.session_state:
 
         st.success(f"✅ Master Schedule successfully computed for {target_date_disp.strftime('%B %d, %Y')}.")
 
+        # Download button — available immediately after generation
+        _csv_dl = schedule_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Download Schedule as CSV",
+            data=_csv_dl,
+            file_name=f"schedule_{target_date_disp.strftime('%Y-%m-%d')}.csv",
+            mime="text/csv",
+        )
+
         col1, col2, col3 = st.columns(3)
         with col1:
            metric_card("🟢 Trains in Service Core", str(service_count), f"-{breakdowns}" if breakdowns>0 else None, "#00CC66")
@@ -231,7 +246,7 @@ if 'generated_schedule_df' in st.session_state:
         tab_gantt, tab_detail, tab_route_opt, tab_crew, tab_whatif = st.tabs([
             "📊 Gantt Chart", 
             "📋 Detailed Schedule",
-            "🚇 HMRL Route Optimizer",
+            "🚇 Route Optimizer",
             "👥 Crew Scheduling",
             "🔮 What-If & Multi-Day"
         ])
@@ -360,8 +375,8 @@ if 'generated_schedule_df' in st.session_state:
 
         # ===== TAB 3: HMRL ROUTE OPTIMIZER (merged with Route Map) =====
         with tab_route_opt:
-            st.subheader("🚇 Intelligent Route Balancing (HMRL Specifications)")
-            st.info("Algorithms natively analyze Hyderabad's Red (Miyapur ↔ LB Nagar), Green (JBS ↔ MGBS), and Blue (Nagole ↔ Raidurg) lines.")
+            st.subheader("🚇 Intelligent Route Balancing")
+            st.info("Algorithms natively analyze Red (Miyapur ↔ LB Nagar), Green (JBS ↔ MGBS), and Blue (Nagole ↔ Raidurg) lines.")
 
             # --- Route Map Section (merged from old Route Map tab) ---
             if service_count > 0:
@@ -395,9 +410,8 @@ if 'generated_schedule_df' in st.session_state:
             st.divider()
 
             # --- GA Route Optimizer Section ---
-            mode = st.radio("Optimization Engine", ["⚡ Fast Mode (Greedy)", "🧬 GA Mode (DEAP)"], horizontal=True)
             
-            if mode == "🧬 GA Mode (DEAP)":
+            if optimization_mode == "🧬 GA Mode (DEAP)":
                 st.info("Running DEAP Genetic Algorithm: Ordered Crossover, Tournament Selection (k=3)")
                 from deap import base, creator, tools, algorithms
                 import random
@@ -475,7 +489,7 @@ if 'generated_schedule_df' in st.session_state:
                             gens_no_improve += 1
                             
                         st_prog.progress(min((gen+1)/100, 1.0), text=f"GA Generation {gen+1} running...")
-                        st_metric.metric("Generation Count", gen+1, delta=f"Best Fitness: {best_fitness}", delta_color="normal")
+                        st_metric.metric("Generation Count", gen+1, delta=f"Best Fitness: {best_fitness:.2f}", delta_color="normal")
                         
                         if gens_no_improve >= 20:
                             break
@@ -510,17 +524,12 @@ if 'generated_schedule_df' in st.session_state:
                     optimized_routes, opt_time = perform_route_optimization(schedule_df, target_date.strftime("%Y-%m-%d"))
             st.caption(f"Data last cached: {opt_time}")
             
-            st.dataframe(optimized_routes[['train_id', 'assigned_route', 'route_priority', 'home_depot', 'assignment_reason']], use_container_width=True)
+            st.dataframe(optimized_routes[['train_id', 'assigned_route', 'route_priority', 'home_depot', 'assignment_reason']].head(10), use_container_width=True, hide_index=True)
+            with st.expander("Show all routes"):
+                st.dataframe(optimized_routes[['train_id', 'assigned_route', 'route_priority', 'home_depot', 'assignment_reason']], use_container_width=True, hide_index=True)
             
             with st.spinner("Optimizing route distribution..."):
                 _, recs = perform_route_distribution(optimized_routes)
-            for r in recs:
-                if "DEFICIT" in r:
-                    st.error(r)
-                elif "PERFECT" in r.upper():
-                    st.success(r)
-                else:
-                    st.info(r)
                         
             # Guard: optimized_routes must be a valid non-empty DataFrame
             if optimized_routes is None or not isinstance(optimized_routes, pd.DataFrame) or optimized_routes.empty:
@@ -535,9 +544,9 @@ if 'generated_schedule_df' in st.session_state:
                 pct_g, def_g = get_cached_route_capacity("Green Line", avail_green)
                 pct_b, def_b = get_cached_route_capacity("Blue Line", avail_blue)
                 
-                c1.metric("🔴 Red", f"{pct_r}%", delta=f"{def_r} Trains vs Ideal")
-                c2.metric("🟢 Green", f"{pct_g}%", delta=f"{def_g} Trains vs Ideal")
-                c3.metric("🔵 Blue", f"{pct_b}%", delta=f"{def_b} Trains vs Ideal")
+                c1.metric("🔴 Red Line Fill", f"{pct_r}%", delta=f"{def_r} Trains (Deficit)" if def_r < 0 else f"+{def_r} Surplus" if def_r > 0 else "Perfect Balance", delta_color="normal" if def_r == 0 else "inverse")
+                c2.metric("🟢 Green Line Fill", f"{pct_g}%", delta=f"{def_g} Trains (Deficit)" if def_g < 0 else f"+{def_g} Surplus" if def_g > 0 else "Perfect Balance", delta_color="normal" if def_g == 0 else "inverse")
+                c3.metric("🔵 Blue Line Fill", f"{pct_b}%", delta=f"{def_b} Trains (Deficit)" if def_b < 0 else f"+{def_b} Surplus" if def_b > 0 else "Perfect Balance", delta_color="normal" if def_b == 0 else "inverse")
 
             # --- Route-wise Assignee Roster ---
             if service_count > 0:
@@ -562,7 +571,9 @@ if 'generated_schedule_df' in st.session_state:
                 mc1.metric("Total Duty Shifts Generated", len(crew_df))
                 mc2.metric("Active Drivers Placed", len(crew_df['driver_id'].unique()))
                 mc3.metric("Legal Compliance", "100%")
-                st.dataframe(crew_df[['train_id', 'route', 'shift_start', 'shift_end', 'driver_id', 'driver_name', 'conductor_id', 'home_depot']], use_container_width=True)
+                st.dataframe(crew_df[['train_id', 'route', 'shift_start', 'shift_end', 'driver_id', 'driver_name', 'conductor_id', 'home_depot']].head(10), use_container_width=True, hide_index=True)
+                with st.expander("Show all crew assignments"):
+                    st.dataframe(crew_df[['train_id', 'route', 'shift_start', 'shift_end', 'driver_id', 'driver_name', 'conductor_id', 'home_depot']], use_container_width=True, hide_index=True)
 
         # ===== TAB 5: WHAT-IF & MULTI-DAY =====
         with tab_whatif:
@@ -582,21 +593,21 @@ if 'generated_schedule_df' in st.session_state:
                     
                     if scenario == "Train Breakdown on Red Line":
                         imp, _ = result_data
-                        st.error(f"Critical Incident Active: {imp['Passenger Impact Severity']}")
+                        st.error(f"🔴 Critical Incident Active: {imp['Passenger Impact Severity']}")
                         for k, v in imp.items():
-                            st.write(f"**{k}:** {v}")
+                            st.markdown(f"**{k}:** {v}")
                     elif scenario == "Ameerpet Interchange Disruption":
                         plan, _ = result_data
-                        st.warning("Platform Isolation Executed")
+                        st.warning("⚠️ Platform Isolation Executed")
                         for k, v in plan.items():
-                            st.write(f"**{k}:** {v}")
+                            st.markdown(f"**{k}:** {v}")
                     elif scenario == "Tech Hub Rush (Blue Line Surge)":
                         surge = result_data
-                        st.success("Surge Control Deployed")
+                        st.success("✅ Surge Control Deployed")
                         for k, v in surge.items():
-                            st.write(f"**{k}:** {v}")
+                            st.markdown(f"**{k}:** {v}")
                     else:
-                        st.info("Applying +10min rain delay headers across CBTC Network.")
+                        st.info("ℹ️ Applying +10min rain delay headers across CBTC Network.")
 
             st.divider()
 
@@ -608,12 +619,17 @@ if 'generated_schedule_df' in st.session_state:
                 sched, week_time = perform_weekly_schedule(target_date)
             st.caption(f"Data last cached: {week_time}")
             
-            st.write("### Simulated Weekly Baseline")
-            st.dataframe(sched, use_container_width=True)
-            st.info("System has booked 1 Mega Block safely out of path for next Sunday.")
+            st.subheader("Simulated Weekly Baseline")
+            st.dataframe(sched.head(10), use_container_width=True, hide_index=True)
+            with st.expander("Show full weekly schedule"):
+                st.dataframe(sched, use_container_width=True, hide_index=True)
+            st.info("ℹ️ System has booked 1 Mega Block safely out of path for next Sunday.")
             
         if alerts:
             st.divider()
             with st.expander(f"⚠ View {len(alerts)} Active System Alerts", expanded=False):
                 for alert in alerts:
                     st.warning(alert)
+
+from components.custom_widgets import render_page_nav
+render_page_nav('pages/01_🏠_Home.py', '🏠 Home', 'pages/03_🔧_Maintenance.py', '🔧 Maintenance')

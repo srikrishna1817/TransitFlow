@@ -8,7 +8,7 @@ from utils.ui_theme import apply_theme
 from components.custom_widgets import metric_card, breadcrumb, status_badge
 from utils.keyboard_shortcuts import register_shortcuts
 
-st.set_page_config(page_title="HMRL Home", page_icon="🚄", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="TransitFlow Home", page_icon="🚄", layout="wide", initial_sidebar_state="collapsed")
 user = require_auth('Home')
 
 apply_theme()
@@ -18,21 +18,25 @@ register_shortcuts()
 breadcrumb(["TransitFlow Home", "Executive Dashboard"])
 
 # Hero Banner
+now_ts = datetime.datetime.now()
 st.markdown(f"""
 <div class="hero-banner">
     <div>
         <h1 class="hero-title">Welcome back, {user.get('username', 'Executive').capitalize()}!</h1>
-        <p class="hero-subtitle">Hyderabad Metro Rail (HMRL) Command Center</p>
+        <p class="hero-subtitle">Metro Rail Command Center — Fleet Operations Overview</p>
     </div>
     <div style="text-align: right;">
         <div style="color: #10B981; font-weight: 600; font-size: 1.1rem; display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
             <div style="width:10px;height:10px;background:#10B981;border-radius:50%;box-shadow:0 0 10px #10B981;animation:pulse 2s infinite;"></div>
             Systems Operational
         </div>
-        <div style="color: #64748B; font-size: 0.9rem; margin-top: 5px;">Last sync: {datetime.datetime.now().strftime('%d %b %Y, %I:%M %p')}</div>
+        <div style="color: #64748B; font-size: 0.9rem; margin-top: 5px;">Last updated: {now_ts.strftime('%H:%M:%S')}</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+st.caption("Real-time fleet health, maintenance status, and quick actions for operations staff.")
+st.divider()
 
 from utils.data_loader import load_trains_data, load_maintenance_jobs, load_certificates_data
 trains_df = load_trains_data()
@@ -40,7 +44,7 @@ maint_df = load_maintenance_jobs()
 cert_df = load_certificates_data()
 
 if trains_df is None or trains_df.empty:
-    st.error("Error loading data files. Please check the data/ directory.")
+    st.error("❌ Error loading data files. Please check the data/ directory.")
 else:
     # KPIs
     total_fleet = len(trains_df)
@@ -57,11 +61,11 @@ else:
     with col1:
         metric_card("Total Fleet Size", str(total_fleet), None, "#3B82F6")
     with col2:
-        metric_card("Trains in Service", str(in_service), f"+{(in_service/total_fleet*100):.1f}%", "#10B981")
+        metric_card("Trains in Service", str(in_service), None, "#10B981")
     with col3:
-        metric_card("Trains in Maintenance", str(in_maint), f"-{in_maint}", "#F59E0B")
+        metric_card("Trains in Maintenance", str(in_maint), None, "#F59E0B")
     with col4:
-        metric_card("Avg Fleet Health", f"{health_score:.1f}%", "+1.2%", "#10B981" if health_score >= 80 else "#F59E0B")
+        metric_card("Avg Fleet Health", f"{health_score:.1f}%", None, "#10B981" if health_score >= 80 else "#F59E0B")
 
     st.markdown("<div style='height: 30px;'></div>", unsafe_allow_html=True)
     
@@ -103,19 +107,18 @@ else:
         
     with colC:
         st.markdown("<div class='panel-title'>📜 Certificate Alerts</div>", unsafe_allow_html=True)
-        now = datetime.datetime.now()
         cert_df['Valid_Until'] = pd.to_datetime(cert_df['Valid_Until'])
-        days_out = (cert_df['Valid_Until'] - now).dt.days
+        days_out = (cert_df['Valid_Until'] - now_ts).dt.days
         
         expired_count = len(cert_df[days_out < 0])
         expiring_soon = len(cert_df[(days_out >= 0) & (days_out <= 15)])
         
         if expired_count > 0:
-            st.error(f"❌ Certificates Completely Expired: {expired_count}")
+            st.error(f"❌ Certificates Expired: {expired_count}")
         elif expiring_soon > 0:
-            st.warning(f"⚠️ Certificates Expiring in ≤ 15 Days: {expiring_soon}")
+            st.warning(f"⚠️ Expiring in ≤ 15 Days: {expiring_soon}")
         else:
-            st.success("All Fleet certifications are up to date.")
+            st.success("✅ All fleet certifications are up to date.")
             
         st.markdown("""
         <div style="background: rgba(30,41,59,0.5); padding: 12px; border-radius: 8px; font-size: 0.85rem; color: #94A3B8; margin-top: 15px; border-left: 3px solid #60A5FA;">
@@ -133,3 +136,6 @@ else:
     }
     </style>
     """, unsafe_allow_html=True)
+
+from components.custom_widgets import render_page_nav
+render_page_nav(None, None, 'pages/02_📅_Schedule.py', '📅 Schedule')

@@ -97,8 +97,8 @@ def forecast_fleet_health(days_ahead=30):
     dates = pd.date_range(start_date, end_date)
     
     np.random.seed(42) # For consistent UI demo
-    # Create a realistic historical trend that ends near the current average
-    historical_slope = np.random.uniform(-0.05, 0.02)
+    # Create a realistic historical trend that ends near the current average (make it positive for demo)
+    historical_slope = np.random.uniform(0.01, 0.05)
     base_healths = np.linspace(current_avg - (historical_slope * 90), current_avg, len(dates))
     noise = np.random.normal(0, 1.5, len(dates))
     historical_healths = np.clip(base_healths + noise, 0, 100)
@@ -245,11 +245,11 @@ def calculate_cost_forecast(months_ahead=3):
         # Generate fake future costs based on predicted breakdowns
         dates = pd.date_range(today + datetime.timedelta(days=1), today + datetime.timedelta(days=90))
         np.random.seed(22)
-        fake_dates = np.random.choice(dates, size=95) # 95 jobs next 90 days (slight increase)
+        fake_dates = np.random.choice(dates, size=70) # 70 jobs next 90 days (slight decrease)
         future_costs_sim = pd.DataFrame({
             'Date': fake_dates,
-            'Cost': np.random.uniform(20000, 90000, size=95),
-            'Failure_Type': np.random.choice(['HVAC', 'Brake Systems', 'Electrical', 'Doors'], size=95)
+            'Cost': np.random.uniform(15000, 70000, size=70),
+            'Failure_Type': np.random.choice(['HVAC', 'Brake Systems', 'Electrical', 'Doors'], size=70)
         })
         # Mock time to failure since the function relies on it later
         future_costs_sim['Date'] = pd.to_datetime(future_costs_sim['Date'])

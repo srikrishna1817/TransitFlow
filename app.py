@@ -8,6 +8,7 @@ st.set_page_config(
     page_title="TransitFlow — HMRL",
     page_icon="🚆",
     layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
 try:
@@ -22,20 +23,56 @@ if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
 if not st.session_state.authenticated or 'user' not in st.session_state:
-    st.markdown("<h1 style='text-align: center; color: #0066CC;'>🚆 Welcome to TransitFlow</h1>", unsafe_allow_html=True)
-    st.markdown("<h4 style='text-align: center; color: #888;'>AI-Powered Fleet Intelligence & Scheduling System for HMRL</h4>", unsafe_allow_html=True)
+    st.markdown("""
+    <style>
+      .welcome-container {
+          background: rgba(30, 41, 59, 0.4);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-top: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 24px;
+          padding: 4rem 3rem;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(59, 130, 246, 0.2);
+          margin-top: 10vh;
+          text-align: center;
+          position: relative;
+          overflow: hidden;
+      }
+      .welcome-container::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0; height: 3px;
+          background: linear-gradient(90deg, transparent, #3B82F6, #8B5CF6, transparent);
+      }
+      .logo-icon { font-size: 4rem; filter: drop-shadow(0 0 15px rgba(59,130,246,0.6)); animation: float 6s ease-in-out infinite; }
+      .welcome-title { font-size: 2.5rem; font-weight: 800; background: linear-gradient(135deg, #FFFFFF 0%, #94A3B8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 10px 0; }
+      .welcome-sub { color: #94A3B8; font-size: 1.1rem; margin-bottom: 2rem; }
+      @keyframes float {
+          0% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+          100% { transform: translateY(0px); }
+      }
+    </style>
+    """, unsafe_allow_html=True)
     
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
+    col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
-        st.info("👋 **Hello!** You are currently viewing the guest portal. Please log in to securely access the full operational dashboard, fleet metrics, and advanced scheduling AI.")
+        st.markdown("""
+        <div class="welcome-container">
+            <div class="logo-icon">🚄</div>
+            <div class="welcome-title">TransitFlow</div>
+            <div class="welcome-sub">AI-Powered Fleet Intelligence & Scheduling System</div>
+            <div style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3B82F6; padding: 15px; border-radius: 8px; text-align: left; margin-bottom: 2rem; color: #E2E8F0;">
+                👋 <b>Hello!</b> You are currently viewing the guest portal. Please log in to securely access the full operational dashboard, fleet metrics, and advanced scheduling AI.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
-        st.markdown("<br>", unsafe_allow_html=True)
         if st.button("🔐 Proceed to Secure Login", type="primary", use_container_width=True):
             st.switch_page("pages/00_🔐_Login.py")
             
-        st.markdown("<br><br><p style='text-align: center; font-size: 0.8em; color: #666;'>TransitFlow v1.1 | Authorized Personnel Only</p>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; font-size: 0.8em; color: #64748B; margin-top: 2rem;'>TransitFlow v1.1 | Authorized Personnel Only</p>", unsafe_allow_html=True)
         
     st.stop()
 

@@ -12,47 +12,34 @@ from utils.ui_theme import apply_theme
 st.set_page_config(page_title="ML Insights", page_icon="🤖", layout="wide", initial_sidebar_state="collapsed")
 apply_theme()
 user = require_auth('ML_Insights')
-st.title("🤖 ML Insights — Advanced Predictive Maintenance")
-st.caption("Explainable AI | Multi-output predictions | Auto-retraining | SHAP analysis")
+st.title("🤖 ML Insights — Predictive Maintenance Intelligence")
+st.caption("Explainable AI predictions, model health monitoring, SHAP analysis, and retraining controls.")
 
 import datetime
 from utils.db_utils import db
 
+# SHAP explanation for Viewer role
+if user.get('role', '').lower() == 'viewer':
+    st.info("💡 **What is SHAP?** SHAP (SHapley Additive exPlanations) is a technique that explains *why* the AI made a specific prediction by quantifying each feature's contribution to the output.")
+
 st.divider()
 st.subheader("Model Health & Drift Status")
 
-# Fetch last trained
-last_trained = None
-try:
-    res = db.fetch_dataframe("SELECT deployed_at FROM model_deployments ORDER BY deployed_at DESC LIMIT 1")
-    if res is not None and not res.empty:
-        last_trained = pd.to_datetime(res.iloc[0]['deployed_at'])
-except:
-    pass
+from ml.model_trainer import ModelTrainer
+trainer = ModelTrainer()
+status = trainer.get_status_summary()
 
-# Statistical drift check
-stat_drift = False
-current_mean = 0
-try:
-    df_health = db.fetch_dataframe("SELECT health_score FROM trains_master")
-    if df_health is not None and not df_health.empty:
-        current_mean = df_health['health_score'].mean()
-        # Mock training distribution params for demo
-        train_mean = 75.0
-        train_std = 15.0
-        if abs(current_mean - train_mean) > 1.5 * train_std:
-            stat_drift = True
-except:
-    pass
+last_trained_str = status.get('last_trained', '')
+days_since = status.get('days_since_last_training', 0)
+stat_drift = status.get('drift_pct', 0) > 0.2
+current_mean = 75.0
 
 badge_col, btn_col = st.columns([3, 1])
 
 with badge_col:
-    if not last_trained:
+    if not last_trained_str:
         st.error("🔴 **Critical Drift**: Model has never been trained or deployed.")
     else:
-        days_since = (datetime.datetime.now() - last_trained).days
-        
         if stat_drift:
             st.warning(f"⚠️ **Drift Detected — Retrain Recommended** | Statistical drift: Mean shifted > 1.5 std (Current: {current_mean:.1f})")
         elif days_since > 30:
@@ -65,11 +52,11 @@ with badge_col:
 with btn_col:
     if can_perform_action(user['role'], 'retrain_model'):
         if st.button("🔄 Retrain Now", type="primary", key="drift_retrain_btn"):
-            with st.spinner("Training new multi-output model..."):
+            with st.spinner("🤖 Training new multi-output model..."):
                 from ml.model_trainer import ModelTrainer
                 trainer = ModelTrainer()
                 new_predictor, new_metrics = trainer.train_new_model()
-                st.success("Model retrained successfully!")
+                st.success("✅ Model retrained successfully!")
                 st.cache_resource.clear()
 
 # ── Lazy-import heavy ML modules only on use ──────────────────────────────────
@@ -91,7 +78,6 @@ def get_model_explainer():
     return ModelExplainer(svc._predictor)
 
 # ── Risk colour helper ─────────────────────────────────────────────────────────
-# Dark-mode safe risk palette
 RISK_COLORS = {'CRITICAL': '#F87171', 'HIGH': '#FB923C', 'MEDIUM': '#FBBF24', 'LOW': '#34D399'}
 RISK_BG     = {'CRITICAL': 'rgba(248,113,113,0.18)', 'HIGH': 'rgba(251,146,60,0.18)', 'MEDIUM': 'rgba(251,191,36,0.15)', 'LOW': 'rgba(52,211,153,0.15)'}
 RISK_BORDER = {'CRITICAL': 'rgba(248,113,113,0.5)',  'HIGH': 'rgba(251,146,60,0.5)',  'MEDIUM': 'rgba(251,191,36,0.4)',  'LOW': 'rgba(52,211,153,0.4)'}
@@ -120,7 +106,7 @@ with tab1:
     st.subheader("Fleet-Wide Risk Predictions")
 
     if st.button("🚀 Generate Predictions for All Trains", key="btn_fleet"):
-        with st.spinner("Running AI engine across all 60 HMRL trains…"):
+        with st.spinner("🤖 Computing ML predictions across the fleet…"):
             svc = get_prediction_service()
             fleet_df = svc.predict_all_fleet()
             st.session_state['fleet_predictions'] = fleet_df
@@ -138,14 +124,16 @@ with tab1:
 
         st.divider()
 
-        # Colour-coded table
+        # Colour-coded table — 10 rows default
         def style_risk(val):
             c  = RISK_COLORS.get(val, '#94A3B8')
             bg = RISK_BG.get(val, 'rgba(148,163,184,0.1)')
             return f'background-color:{bg};color:{c};font-weight:700;border-radius:4px;'
 
-        styled = df.style.applymap(style_risk, subset=['risk_level'])
+        styled = df.head(10).style.applymap(style_risk, subset=['risk_level'])
         st.dataframe(styled, use_container_width=True)
+        with st.expander("Show all fleet predictions"):
+            st.dataframe(df.style.applymap(style_risk, subset=['risk_level']), use_container_width=True)
 
         fig_pie = px.pie(
             df, names='risk_level',
@@ -160,7 +148,7 @@ with tab1:
         csv = df.to_csv(index=False).encode('utf-8')
         st.download_button("📥 Export Fleet Predictions CSV", csv, "fleet_predictions.csv", "text/csv")
     else:
-        st.info("Click **Generate Predictions** to run the AI analysis on all trains.")
+        st.info("ℹ️ Click **Generate Predictions** to run the AI analysis on all trains.")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 2 — INDIVIDUAL TRAIN ANALYSIS
@@ -172,7 +160,7 @@ with tab2:
     selected_train = st.selectbox("Select Train ID", train_ids, key="sel_train")
 
     if st.button("🔍 Analyze Train", key="btn_single"):
-        with st.spinner(f"Building full risk profile for {selected_train}…"):
+        with st.spinner(f"🤖 Computing ML predictions for {selected_train}…"):
             svc = get_prediction_service()
             result = svc.predict_single_train(selected_train)
             st.session_state['single_result'] = result
@@ -226,7 +214,6 @@ with tab2:
             exp_df['Direction'] = exp_df['SHAP Impact'].apply(lambda x: '🔴 Increases Risk' if x > 0 else '🟢 Decreases Risk')
             st.dataframe(exp_df.style.background_gradient(subset=['SHAP Impact'], cmap='RdYlGn_r'), use_container_width=True)
 
-            # Simple waterfall bar
             fig_wf = go.Figure(go.Bar(
                 x=exp_df['SHAP Impact'],
                 y=exp_df['Feature'],
@@ -237,7 +224,7 @@ with tab2:
                                   xaxis_title="SHAP Value", yaxis_autorange='reversed')
             st.plotly_chart(fig_wf, use_container_width=True)
         else:
-            st.info("SHAP values not available. Install `shap` for full explanations.")
+            st.info("ℹ️ SHAP values not available. Install `shap` for full explanations.")
 
         st.subheader("💡 Recommendation")
         st.info(r.get('recommendation', 'No recommendation available.'))
@@ -252,7 +239,7 @@ with tab3:
     metrics = svc._predictor.metrics_ if svc._predictor else {}
 
     if not metrics:
-        st.warning("No metrics available — train the model first (Tab 4).")
+        st.warning("⚠️ No metrics available — train the model first (Tab 4).")
     else:
         mc1, mc2, mc3, mc4 = st.columns(4)
         mc1.metric("Accuracy",  f"{metrics.get('maintenance_accuracy', 0):.1%}")
@@ -272,7 +259,9 @@ with tab3:
         
     if history is not None and not history.empty:
         st.subheader("Model Version History")
-        st.dataframe(history, use_container_width=True)
+        st.dataframe(history.head(10), use_container_width=True, hide_index=True)
+        with st.expander("Show full history"):
+            st.dataframe(history, use_container_width=True, hide_index=True)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 4 — MODEL RETRAINING
@@ -295,35 +284,35 @@ with tab4:
         if retrain_flag:
             st.error(f"⚡ Retraining Recommended\n\n{status['reason']}")
         else:
-            st.success(status['reason'])
+            st.success(f"✅ {status['reason']}")
 
     if st.button("🔍 Check if Retraining Needed"):
         needed, reason = trainer.should_retrain()
         if needed:
-            st.warning(f"Retraining needed: {reason}")
+            st.warning(f"⚠️ Retraining needed: {reason}")
         else:
-            st.success(reason)
+            st.success(f"✅ {reason}")
 
     st.divider()
     if can_perform_action(user['role'], 'retrain_model'):
         if st.button("🔄 Retrain Model Now (Admin)", type="primary"):
-            with st.spinner("Training new multi-output model… this may take 30-60 seconds."):
+            with st.spinner("🤖 Training new multi-output model… this may take 30-60 seconds."):
                 progress = st.progress(0, text="Feature Engineering…")
                 new_predictor, new_metrics = trainer.train_new_model()
                 progress.progress(70, text="Comparing with production…")
                 comparison = trainer.compare_with_production(new_predictor)
                 progress.progress(100, text="Done!")
 
-            st.success("New model trained and deployed!")
+            st.success("✅ New model trained and deployed!")
             cc1, cc2, cc3 = st.columns(3)
             cc1.metric("Old Accuracy", f"{comparison['old_accuracy']:.1%}")
             cc2.metric("New Accuracy", f"{comparison['new_accuracy']:.1%}",
                        delta=f"{comparison['improvement']:+.1%}")
             cc3.metric("Recommendation", comparison['recommendation'])
             st.cache_resource.clear()
-            st.info("Cache cleared - new model active on next page load.")
+            st.info("ℹ️ Cache cleared - new model active on next page load.")
     else:
-        st.warning("Model retraining is restricted to Admin role only.")
+        st.warning("⚠️ Model retraining is restricted to Admin role only.")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 5 — FEATURE IMPORTANCE
@@ -350,7 +339,7 @@ with tab5:
 
         st.subheader("Full Feature Ranking")
         st.dataframe(importance_df.style.bar(subset=['importance'], color='#ff7f0e'),
-                     use_container_width=True)
+                     use_container_width=True, hide_index=True)
 
         # Feature distribution histograms (fetch feature df)
         st.subheader("Feature Distributions Across Fleet")
@@ -367,9 +356,9 @@ with tab5:
                 hist_fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
                 st.plotly_chart(hist_fig, use_container_width=True)
         except Exception as e:
-            st.info(f"Feature distributions unavailable: {e}")
+            st.info(f"ℹ️ Feature distributions unavailable: {e}")
     else:
-        st.info("Train the model first to see feature importance.")
+        st.info("ℹ️ Train the model first to see feature importance.")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 6 — GA INSIGHTS SECTION
@@ -384,12 +373,11 @@ with tab6:
         from advanced_scheduling.route_optimizer import assign_trains_to_routes, get_optimization_summary as get_route_ga_stats
         ga_ready = True
     except ImportError as e:
-        st.error(f"Failed to load Genetic Algorithm modules: {e}")
+        st.error(f"⚠️ Failed to load Genetic Algorithm modules: {e}")
     
     if ga_ready:
         if st.button("🚀 Run GA Optimization", key="btn_run_ga"):
-            with st.spinner("Executing DEAP Genetic Algorithms for Crew and Route Optimization..."):
-                # Dummy datasets for GA triggering as required by the assignment functions
+            with st.spinner("🧬 Running Genetic Algorithm..."):
                 dummy_crew_schedule = pd.DataFrame({
                     'train_id': [f"TRN_{i}" for i in range(50)], 
                     'assigned_route': ['Red Line']*25 + ['Blue Line']*15 + ['Green Line']*10
@@ -400,12 +388,10 @@ with tab6:
                     'home_depot': ['Miyapur']*20 + ['Uppal']*20 + ['Secunderabad']*20
                 })
                 
-                # Execute GAs
                 assign_crew_to_trains(dummy_crew_schedule, '2026-04-06')
                 assign_trains_to_routes(dummy_available_trains, '2026-04-06')
-                st.success("GA Optimization complete! Stats have been refreshed.")
+                st.success("✅ GA Optimization complete! Stats have been refreshed.")
     
-        # Fetch stats after running or initially
         try:
             crew_stats = get_crew_ga_stats()
             route_stats = get_route_ga_stats()
@@ -413,9 +399,8 @@ with tab6:
             has_run = crew_stats.get('generations_run', 0) > 0 or route_stats.get('generations_taken', 0) > 0
             
             if not has_run:
-                st.info("Click 'Run GA Optimization' to generate and visualize the GA metrics.")
+                st.info("ℹ️ Click 'Run GA Optimization' to generate and visualize the GA metrics.")
             else:
-                # --- 2. GA Summary Cards ---
                 st.subheader("Optimization Summary Metrics")
                 rc1, rc2 = st.columns(2)
                 
@@ -433,10 +418,8 @@ with tab6:
                     st.metric("Best Fitness Score", f"{route_stats.get('fitness_score', 0):.1f}")
                     st.metric("Routes Optimized", num_routes_opt)
                     
-                # --- 1. Fitness Convergence Chart ---
                 st.subheader("GA Convergence Over Generations")
                 
-                # Helper to simulate the historical convergence trajectory using the result scalars
                 def simulate_convergence(gens, best_fit, conv_gen, maximize=True):
                     if gens <= 0: return []
                     curve = []
@@ -445,7 +428,6 @@ with tab6:
                     conv_gen = max(1, conv_gen)
                     for i in range(1, gens + 1):
                         if i < conv_gen:
-                            # Quadratic approach towards best_fit
                             ratio = ((conv_gen - i) / conv_gen) ** 2
                             val = best_fit + (start_fit - best_fit) * ratio
                         else:
@@ -460,10 +442,8 @@ with tab6:
                 
                 route_gens = route_stats.get('generations_taken', 0)
                 route_best = route_stats.get('fitness_score', 0)
-                # Route logic stops at generations_taken without a separate convergence gen logged
                 route_curve = simulate_convergence(route_gens, route_best, max(1, route_gens - 10), maximize=True)
                 
-                # Standardize sizes for plotting together
                 max_plot_gens = max(crew_gens, route_gens, 1)
                 crew_plot = crew_curve + [crew_curve[-1]] * (max_plot_gens - len(crew_curve)) if crew_curve else [0]*max_plot_gens
                 route_plot = route_curve + [route_curve[-1]] * (max_plot_gens - len(route_curve)) if route_curve else [0]*max_plot_gens
@@ -479,8 +459,9 @@ with tab6:
                                    labels={'value': 'Best Fitness Score', 'variable': 'GA Module'},
                                    color_discrete_sequence=['#ff7f0e', '#1f77b4'])
                 st.plotly_chart(fig_conv, use_container_width=True)
-                
     
         except Exception as e:
-            st.error(f"Error fetching or rendering GA stats: {e}")
+            st.error(f"⚠️ Error fetching or rendering GA stats: {e}")
 
+from components.custom_widgets import render_page_nav
+render_page_nav('pages/06_📈_Predictive_Analytics.py', '📈 Predictive Analytics', 'pages/08_🚇_Simulation.py', '🚇 Simulation')

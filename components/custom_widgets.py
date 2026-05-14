@@ -37,3 +37,17 @@ def loading_overlay(message="Optimizing System Data..."):
     """Displays a branded loading spinner container."""
     with st.spinner(f"✨ {message}"):
         pass
+
+def render_page_nav(prev_url: str = None, prev_title: str = None, next_url: str = None, next_title: str = None):
+    """Renders bottom navigation buttons to seamlessly move between pages."""
+    st.markdown("<div style='height: 40px;'></div>", unsafe_allow_html=True)
+    st.divider()
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col1:
+        if prev_url and prev_title:
+            if st.button(f"⬅️ Previous: {prev_title}", use_container_width=True):
+                st.switch_page(prev_url)
+    with col3:
+        if next_url and next_title:
+            if st.button(f"Next: {next_title} ➡️", use_container_width=True, type="primary"):
+                st.switch_page(next_url)

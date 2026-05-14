@@ -9,12 +9,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from auth.page_guard import require_auth
 from utils.ui_theme import apply_theme
 
-st.set_page_config(page_title="HMRL Live Simulation", page_icon="🚇", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Metro Live Simulation", page_icon="🚇", layout="wide", initial_sidebar_state="collapsed")
 apply_theme()
 user = require_auth('Simulation')
 
 # ─────────────────────────────────────────────────────────────────────────────
-# NETWORK DATA — Real HMRL Metro Station Topology
+# NETWORK DATA — Real Metro Station Topology
 # ─────────────────────────────────────────────────────────────────────────────
 RED_STATIONS = [
     "Miyapur", "JNTU College", "KPHB Colony", "Kukatpally",
@@ -49,13 +49,14 @@ INTERCHANGE_STATIONS = {
 LINE_COLORS = {
     "Red":   "#E63946",
     "Blue":  "#457B9D",
-    "Green": "#52b788", # Made slightly brighter for better contrast on dark map
+    "Green": "#52b788",
 }
 
 SPEED_MAP = {"Slow": 3.0, "Normal": 2.0, "Fast": 1.0}
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GEOGRAPHIC COORDINATE INTERPOLATION TO MIMIC REAL MAP
+# GEOGRAPHIC COORDINATE INTERPOLATION
+# Moved outside simulation loop — only computed once
 # ─────────────────────────────────────────────────────────────────────────────
 def build_station_coords():
     coords = {}
@@ -86,6 +87,7 @@ def build_station_coords():
         
     return coords
 
+# Build once — used across all ticks
 STATION_COORDS = build_station_coords()
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -252,7 +254,7 @@ def build_map_figure():
         ))
 
     fig.update_layout(
-        title=dict(text="🚇 Geographical HMRL Metro Network — Active Fleet Dispatch", font=dict(size=18, color="#e8f4fd"), x=0.5),
+        title=dict(text="🚇 Metro Network — Active Fleet Dispatch", font=dict(size=18, color="#e8f4fd"), x=0.5),
         paper_bgcolor="#0b1727", plot_bgcolor="#0b1727", font=dict(color="#e8f4fd"),
         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-12, 13]),
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-11, 10], scaleanchor="x", scaleratio=1),
@@ -269,29 +271,43 @@ def build_map_figure():
     return fig
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PAGE DECORATION & LAYOUT
+# PAGE LAYOUT
 # ─────────────────────────────────────────────────────────────────────────────
-st.title("🚇 HMRL Metro Live Simulation")
+st.title("🚇 Metro Live Simulation")
+st.caption("Real-time animated fleet dispatch across three metro lines with stochastic anomaly simulation.")
+st.divider()
+
+# ── Live status metric row ────────────────────────────────────────────────────
+on_time_live   = sum(1 for t in st.session_state.sim_trains if t["status"] == "On Time")
+delayed_live   = sum(1 for t in st.session_state.sim_trains if t["status"] == "Delayed")
+disrupted_live = sum(1 for t in st.session_state.sim_trains if t["status"] == "Disrupted")
+in_depot_live  = len(st.session_state.sim_trains) - on_time_live - delayed_live - disrupted_live
+
+sm1, sm2, sm3, sm4 = st.columns(4)
+sm1.metric("🟢 Trains Running", on_time_live)
+sm2.metric("🟡 Delayed",        delayed_live)
+sm3.metric("🔴 Disrupted",      disrupted_live)
+sm4.metric("🏭 In Depot",       max(0, in_depot_live))
+
+st.divider()
 
 st.info("""
 **📖 Overview & Purpose:**  
-Welcome to the Live Simulation interface. This module visually validates your fleet assignments by translating statistical data into a real-time tracking interface mirroring the true physical geography of the Hyderabad Metro. 
-
-By observing the network with stochastic real-world anomalies (like 5% disruption rates), dispatchers can identify bottleneck stress points near interchanges (Ameerpet / Parade Ground) and track how delays cascade across different routes dynamically.
+This module visually validates fleet assignments by translating statistical data into a real-time tracking interface.
+By observing the network with stochastic anomalies (5% disruption rates), dispatchers can identify bottleneck stress points near interchanges and track how delays cascade dynamically.
 """)
 
-# Sidebar
-with st.sidebar:
+with st.container():
     st.markdown("### ⚙️ Engine Controls")
-
-    col_start, col_reset = st.columns(2)
-    with col_start:
+    c1, c2, c3, c4 = st.columns([1, 1, 2, 2])
+    
+    with c1:
         btn_label = "⏹ Pause" if st.session_state.sim_running else "▶ Play"
         btn_type = "secondary" if st.session_state.sim_running else "primary"
         if st.button(btn_label, use_container_width=True, type=btn_type):
             st.session_state.sim_running = not st.session_state.sim_running
             
-    with col_reset:
+    with c2:
         if st.button("🔄 Reset", use_container_width=True):
             st.session_state.sim_trains = _make_trains()
             st.session_state.sim_tick = 0
@@ -302,14 +318,16 @@ with st.sidebar:
             st.session_state.stat_total_disruptions = 0
             st.session_state.sim_events = []
 
-    st.session_state.sim_speed = st.select_slider(
-        "Simulation Speed", options=["Slow", "Normal", "Fast"],
-        value=st.session_state.sim_speed
-    )
-    
-    st.divider()
-    st.markdown(f"**🕐 Network Clock:** `T+{st.session_state.sim_tick}` updates")
-    st.markdown(f"**Status:** {'🟢 Active Stream' if st.session_state.sim_running else '🔴 Standby'}")
+    with c3:
+        st.session_state.sim_speed = st.select_slider(
+            "Simulation Speed", options=["Slow", "Normal", "Fast"],
+            value=st.session_state.sim_speed, label_visibility="collapsed"
+        )
+        
+    with c4:
+        st.markdown(f"**🕐 Network Clock:** `T+{st.session_state.sim_tick}` | **Status:** {'🟢 Active Stream' if st.session_state.sim_running else '🔴 Standby'}")
+
+st.markdown("<br>", unsafe_allow_html=True)
 
 # Main body placeholders
 sim_col, log_col = st.columns([3, 1])
@@ -319,7 +337,6 @@ with log_col:
     st.markdown("<h4 style='color:#e8f4fd; margin-bottom:10px;'>📜 Live Event Log</h4>", unsafe_allow_html=True)
     event_log_placeholder = st.empty()
 
-# Placed directly underneath the map as requested to get it out of the side panel
 st.divider()
 col_left, col_right = st.columns([1, 1.3])
 
@@ -355,16 +372,16 @@ def render_frame():
     # 1. Map Render
     map_placeholder.plotly_chart(build_map_figure(), use_container_width=True, key=f"m_{st.session_state.sim_tick}")
 
-    # 2. Status Table Render (Middle)
+    # 2. Status Table Render
     status_df = build_status_df()
     styled = status_df.style.applymap(style_status_row, subset=["Health Status"])
     status_placeholder.dataframe(styled, use_container_width=True, height=360)
 
     # 3. Disruption Block Render
-    on_time_count = sum(1 for t in st.session_state.sim_trains if t["status"] == "On Time")
+    _on_time = sum(1 for t in st.session_state.sim_trains if t["status"] == "On Time")
     with stat_meta_placeholder.container():
         m1, m2, m3 = st.columns(3)
-        m1.metric("✅ Trains Active", on_time_count, delta=f"{on_time_count}/{len(st.session_state.sim_trains)}")
+        m1.metric("✅ Trains Active", _on_time, delta=f"{_on_time}/{len(st.session_state.sim_trains)}")
         m2.metric("⚠️ Total Delays", st.session_state.stat_total_delays)
         m3.metric("🚨 Fleet Disruptions", st.session_state.stat_total_disruptions)
 
@@ -407,6 +424,9 @@ try:
     else:
         render_frame()
 except Exception as e:
-    st.error(f"Simulation suspended: {e}")
+    st.error(f"⚠️ Simulation suspended: {e}")
     st.session_state.sim_running = False
     render_frame()
+
+from components.custom_widgets import render_page_nav
+render_page_nav('pages/07_🤖_ML_Insights.py', '🤖 ML Insights', 'pages/09_📄_Reports.py', '📄 Reports')

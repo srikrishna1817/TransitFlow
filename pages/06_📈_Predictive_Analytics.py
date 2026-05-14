@@ -18,11 +18,14 @@ from utils.analytics_utils import (
     generate_recommendations
 )
 
+from utils.ui_theme import apply_theme
+
 st.set_page_config(page_title="Predictive Analytics", page_icon="📈", layout="wide", initial_sidebar_state="collapsed")
+apply_theme()
 user = require_auth('Predictive_Analytics')
 
 st.title("📈 Predictive Analytics Hub")
-st.markdown("Forecasts, trends, and seasonal optimization for Hyderabad Metro Rail fleet operations.")
+st.caption("Forecasts, trends, and seasonal optimization for metro rail fleet operations.")
 st.divider()
 
 # Cache heavy computations
@@ -41,14 +44,31 @@ def load_all_forecasts(cache_buster=5):
         'recs': recs
     }
 
-with st.spinner("Crunching historical & predictive data..."):
+with st.spinner("📊 Crunching historical & predictive data..."):
     data = load_all_forecasts()
+
+# ── Fleet Risk Level metric ─────────────────────────────────────────────────────
+avg_health = data['health_data']['Health'].mean() if not data['health_data'].empty else 50
+if avg_health >= 75:
+    risk_label = "Low 🟢"
+elif avg_health >= 50:
+    risk_label = "Medium 🟡"
+else:
+    risk_label = "High 🔴"
+
+rm1, rm2, rm3 = st.columns(3)
+rm1.metric("Fleet Risk Level", risk_label)
+rm2.metric("Avg Fleet Health", f"{avg_health:.1f}/100")
+rm3.metric("Trains Flagged for Maintenance", len(data['top_trains']) if not data['top_trains'].empty else 0)
+
+st.divider()
 
 # Recommendations Banner
 if data['recs']:
-    st.info("💡 **AI Actionable Insights**")
+    recs_md = "💡 **AI Actionable Insights**\n\n"
     for rec in data['recs']:
-        st.markdown(f"- {rec}")
+        recs_md += f"- {rec}\n"
+    st.info(recs_md)
     st.divider()
 
 tab1, tab2, tab3, tab4 = st.tabs([
@@ -80,12 +100,10 @@ with tab1:
             mode='lines', name='7-Day MA', line=dict(dash='dash', color='rgba(226,232,240,0.5)')
         )
         
-        # Feature 3: Today Line, Forecast Shading, Annotations
         today_date = data['health_data'][data['health_data']['Type'] == 'Forecast']['Date'].min()
         max_date = data['health_data']['Date'].max()
         final_health = data['health_data'][data['health_data']['Date'] == max_date]['Health'].values[0]
 
-        # Convert timestamps to milliseconds (float) to bypass Pandas/Plotly math errors
         today_date_ms = float(pd.to_datetime(today_date).timestamp() * 1000)
         max_date_ms = float(pd.to_datetime(max_date).timestamp() * 1000)
 
@@ -99,7 +117,6 @@ with tab1:
             layer="below", line_width=0
         )
         
-        # Dummy trace to add the shaded region to the legend
         fig_health.add_trace(go.Scatter(
             x=[None], y=[None],
             mode='lines',
@@ -145,13 +162,11 @@ with tab2:
     with col1:
         if not data['preds'].empty:
             st.markdown("#### Upcoming Failures Heatmap")
-            # Create a dense daily count dataframe for heatmapping
             daily = data['preds'].groupby('Predicted_Date').size().reset_index(name='Failures')
             daily['Predicted_Date'] = pd.to_datetime(daily['Predicted_Date'])
             daily['Day'] = daily['Predicted_Date'].dt.day
             daily['DayOfWeek'] = daily['Predicted_Date'].dt.day_name()
             
-            # Simple heatmap representation
             fig_cal = px.density_heatmap(
                 daily, x="Predicted_Date", y="DayOfWeek", z="Failures",
                 color_continuous_scale="Reds", title="Maintenance Event Density",
@@ -159,7 +174,7 @@ with tab2:
             )
             st.plotly_chart(fig_cal, use_container_width=True)
         else:
-            st.info("No train failures predicted within the next 30 days!")
+            st.info("ℹ️ No train failures predicted within the next 30 days!")
             
     with col2:
         if not data['preds'].empty:
@@ -227,14 +242,14 @@ with tab3:
             )
             st.plotly_chart(fig_cost, use_container_width=True)
         else:
-            st.info("Insufficient cost data to plot.")
+            st.info("ℹ️ Insufficient cost data to plot.")
             
     with c2:
         if data['routes'] is not None and not data['routes'].empty:
             st.markdown("#### Cost Distribution by Route")
             fig_route = px.pie(
                 data['routes'], values='Total_Cost', names='assigned_route', hole=0.3,
-                color_discrete_sequence=['#ef553b', '#636efa', '#00cc96'] # Approximate HMRL colors
+                color_discrete_sequence=['#ef553b', '#636efa', '#00cc96']
             )
             fig_route.update_traces(textposition='inside', textinfo='percent+label')
             fig_route.update_layout(showlegend=False, margin=dict(t=0, b=0, l=0, r=0))
@@ -247,7 +262,7 @@ with tab4:
     st.subheader("Temporal and Seasonal Operations Analysis")
     
     if data['seasons'].empty:
-        st.info("Not enough historical data to analyze seasons.")
+        st.info("ℹ️ Not enough historical data to analyze seasons.")
     else:
         scol1, scol2 = st.columns(2)
         
@@ -268,4 +283,7 @@ with tab4:
             )
             st.plotly_chart(fig_dow, use_container_width=True)
             
-        st.info("📊 **Insight:** Understanding seasonal variations in Hyderabad (like heavier Monsoon wear on electricals, or Summer strain on HVAC) enables pre-emptive part purchasing and schedule loosening during hard months.")
+        st.info("📊 **Insight:** Understanding seasonal variations (like heavier Monsoon wear on electricals, or Summer strain on HVAC) enables pre-emptive part purchasing and schedule loosening during hard months.")
+
+from components.custom_widgets import render_page_nav
+render_page_nav('pages/05_📊_Analytics.py', '📊 Analytics', 'pages/07_🤖_ML_Insights.py', '🤖 ML Insights')
