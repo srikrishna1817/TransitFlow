@@ -138,11 +138,9 @@ else:
         crit_alerts = alert_data[alert_data['Severity'] == 'CRITICAL']
         if crit_alerts is not None and not crit_alerts.empty:
             for cat in crit_alerts['Category'].unique():
-                with st.expander(f"❌ {cat}", expanded=True):
+                with st.expander(f"❌ {cat} ({len(crit_alerts[crit_alerts['Category'] == cat])} alerts)", expanded=True):
                     cat_df = crit_alerts[crit_alerts['Category'] == cat]
-                    st.dataframe(cat_df.head(10), use_container_width=True, hide_index=True)
-                    with st.expander("Show all"):
-                        st.dataframe(cat_df, use_container_width=True, hide_index=True)
+                    st.dataframe(cat_df, use_container_width=True, hide_index=True)
                     if st.button(f"Ground all {cat} trains", key=f"btn_{cat}"):
                         st.info("ℹ️ Broadcast signal sent to ground control...")
         else:
