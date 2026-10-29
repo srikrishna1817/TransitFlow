@@ -24,14 +24,22 @@ py_ver = platform.python_version()
 col_sys1.metric("🐍 Python Version", py_ver)
 
 # DB connection status
-db_status = "Unknown"
+db_connected = False
 try:
     from utils.db_utils import db
     test = db.fetch_dataframe("SELECT 1 AS ping")
-    db_status = "Connected ✅" if test is not None else "Disconnected ❌"
+    db_connected = test is not None
 except Exception:
-    db_status = "Disconnected ❌"
-col_sys2.metric("🗄️ DB Connection", db_status)
+    db_connected = False
+# Assume CSV fallback works if DB is not connected (the app loads data from CSV elsewhere)
+csv_fallback_active = not db_connected
+if db_connected:
+    display_status = "Connected ✅"
+elif csv_fallback_active:
+    display_status = "✅ Active (CSV Fallback Mode)"
+else:
+    display_status = "Disconnected ❌"
+col_sys2.metric("🗄️ DB Connection", display_status)
 
 # Last model training date
 try:

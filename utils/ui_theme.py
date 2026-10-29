@@ -38,33 +38,95 @@ def get_custom_css():
         
         /* ── Sidebar Overhaul ─────────────────────────────────────────── */
         [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, rgba(15,23,42,0.85) 0%, rgba(2,6,23,0.95) 100%) !important;
+            background: linear-gradient(180deg, #0B1120 0%, #060B18 100%) !important;
             backdrop-filter: blur(25px) !important;
             -webkit-backdrop-filter: blur(25px) !important;
             border-right: 1px solid rgba(255,255,255,0.08) !important;
             box-shadow: 5px 0 25px rgba(0,0,0,0.5) !important;
+            overflow-y: auto !important;
+        }
+        [data-testid="stSidebar"] > div:first-child {
+            overflow-y: auto !important;
+            height: 100vh !important;
         }
         [data-testid="stSidebarUserContent"] {
-            padding-top: 2rem !important;
+            padding: 1.2rem 0.8rem !important;
+            overflow: visible !important;
         }
+
+        /* Sidebar Brand Header */
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 6px 14px 14px 14px;
+            margin-bottom: 8px;
+        }
+        .sidebar-brand-icon {
+            font-size: 1.8rem;
+            filter: drop-shadow(0 0 10px rgba(59,130,246,0.6));
+        }
+        .sidebar-brand-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #FFFFFF 0%, #94A3B8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.5px;
+        }
+        .sidebar-brand-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            margin: 0 10px 14px 10px;
+        }
+
+        /* Streamlit Navigation list items styled as pills */
         [data-testid="stSidebarNav"] {
             background: transparent !important;
+            max-height: none !important;
+            height: auto !important;
+            overflow-y: visible !important;
+            padding-bottom: 8px !important;
         }
-        [data-testid="stSidebarNav"] li div {
+        [data-testid="stSidebarNav"] ul {
+            max-height: none !important;
+            height: auto !important;
+            overflow: visible !important;
+            padding: 0 !important;
+        }
+        [data-testid="stSidebarNav"] li {
+            list-style-type: none !important;
+            margin: 3px 0 !important;
+        }
+        [data-testid="stSidebarNav"] li a {
+            background: rgba(30, 41, 59, 0.25) !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
             border-radius: 12px !important;
-            margin: 4px 12px !important;
-            transition: all 0.3s ease !important;
+            padding: 9px 14px !important;
+            margin: 2px 6px !important;
+            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
         }
-        [data-testid="stSidebarNav"] li div:hover {
-            background: rgba(59,130,246,0.15) !important;
-            transform: translateX(5px) !important;
+        [data-testid="stSidebarNav"] li a:hover {
+            background: linear-gradient(90deg, rgba(59,130,246,0.2) 0%, rgba(139,92,246,0.15) 100%) !important;
+            border-color: rgba(59, 130, 246, 0.4) !important;
+            transform: translateX(4px) !important;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.15) !important;
+        }
+        [data-testid="stSidebarNav"] li a[aria-current="page"] {
+            background: linear-gradient(90deg, rgba(59,130,246,0.3) 0%, rgba(99,102,241,0.25) 100%) !important;
+            border: 1px solid rgba(59, 130, 246, 0.5) !important;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25) !important;
+        }
+        [data-testid="stSidebarNav"] li a[aria-current="page"] span {
+            color: #FFFFFF !important;
+            font-weight: 700 !important;
         }
         [data-testid="stSidebarNav"] span {
             font-family: 'Outfit', sans-serif !important;
-            font-size: 1.05rem !important;
+            font-size: 0.95rem !important;
             font-weight: 500 !important;
             color: #94A3B8 !important;
-            letter-spacing: 0.5px !important;
+            letter-spacing: 0.3px !important;
         }
         /* Active page in sidebar */
         [data-testid="stSidebarNav"] div[data-testid="stSidebarNavSeparator"] {

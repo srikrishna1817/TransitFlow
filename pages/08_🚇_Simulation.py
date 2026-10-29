@@ -138,6 +138,8 @@ def _init_state():
         st.session_state.stat_total_delays = 0
     if "stat_total_disruptions" not in st.session_state:
         st.session_state.stat_total_disruptions = 0
+        if "last_event_tick" not in st.session_state:
+            st.session_state.last_event_tick = {}
     if "sim_events" not in st.session_state:
         st.session_state.sim_events = []
 

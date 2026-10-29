@@ -64,7 +64,7 @@ trains_data = {
 
 trains_df = pd.DataFrame(trains_data)
 trains_df.to_csv('data/trains_master.csv', index=False)
-print(f"\n✓ trains_master.csv   — Active:{statuses.count('Active')} "
+print(f"\n[INFO] trains_master.csv   — Active:{statuses.count('Active')} "
       f"| Standby:{statuses.count('Standby')} | Maint:{statuses.count('Maintenance')}")
 
 # ── 6. Maintenance Jobs ────────────────────────────────────────────────
@@ -120,7 +120,7 @@ for i, train_id in enumerate(train_ids):
 
 maintenance_df = pd.DataFrame(job_cards)
 maintenance_df.to_csv('data/maintenance_jobs.csv', index=False)
-print(f"✓ maintenance_jobs.csv — {len(job_cards)} jobs generated")
+print(f"[INFO] maintenance_jobs.csv — {len(job_cards)} jobs generated")
 
 # ── 7. Historical Operations (365 days, seasonal) ─────────────────────
 SEASON_WEIGHTS = {
@@ -154,27 +154,26 @@ for day in range(365):
 
 historical_df = pd.DataFrame(historical_data)
 historical_df.to_csv('data/historical_operations.csv', index=False)
-print(f"✓ historical_operations.csv — {len(historical_data):,} records (365 days, seasonal)")
+print(f"[INFO] historical_operations.csv — {len(historical_data):,} records (365 days, seasonal)")
 
 # ── 8. Fitness Certificates (realistic expiry distribution) ────────────
 CERT_TYPES = ['Rolling_Stock', 'Signalling', 'Telecom']
 fitness_data = []
 for train_id in train_ids:
     for cert in CERT_TYPES:
+        # Adjusted distribution for realistic demo
+        # 6% Expired, 6% Expiring within 7 days, 5% Expiring 8‑30 days, 83% healthy (valid >90 days)
         roll = random.random()
-        if roll < 0.10:          # 10% expired
+        if roll < 0.06:                     # Expired
             days_ahead = random.randint(-60, -1)
             sts = 'Expired'
-        elif roll < 0.25:        # 15% expiring within 7 days
+        elif roll < 0.12:                   # Expiring within 7 days
             days_ahead = random.randint(0, 7)
             sts = 'Valid'
-        elif roll < 0.45:        # 20% expiring 8-30 days
+        elif roll < 0.17:                   # Expiring 8‑30 days
             days_ahead = random.randint(8, 30)
             sts = 'Valid'
-        elif roll < 0.75:        # 30% expiring 31-90 days
-            days_ahead = random.randint(31, 90)
-            sts = 'Valid'
-        else:                    # 25% healthy 90+ days
+        else:                               # Healthy (valid 91‑365 days)
             days_ahead = random.randint(91, 365)
             sts = 'Valid'
 

@@ -188,7 +188,8 @@ else:
             ack_id = st.selectbox("Select Alert ID to Mark as Resolved", filtered_log['Alert_ID'].tolist())
             if st.button("Acknowledge Highlighted Alert"):
                 from utils.data_loader import acknowledge_alert
-                success = acknowledge_alert(ack_id, acknowledged_by="System Admin")
+                actor = user.get('full_name') or user.get('username', 'System User')
+                success = acknowledge_alert(ack_id, acknowledged_by=actor)
                 if success:
                     st.success(f"✅ Alert {ack_id} was successfully acknowledged/resolved.")
                     st.cache_data.clear()

@@ -53,11 +53,13 @@ else:
         
     filtered_df = maint_df[(maint_df['Priority'].isin(pri_filter)) & (maint_df['Status'].isin(status_filter))]
 
-    # Table — show first 10, expander for all
-    with st.expander("📋 Show All Maintenance Jobs", expanded=False):
-        st.dataframe(filtered_df, use_container_width=True, hide_index=True)
-    
+    # Maintenance Jobs Table
+    st.markdown(f"**Showing {min(10, len(filtered_df))} of {len(filtered_df)} filtered jobs** (expanded view below):")
     st.dataframe(filtered_df.head(10), use_container_width=True, hide_index=True)
+
+    if len(filtered_df) > 10:
+        with st.expander(f"📋 View All {len(filtered_df)} Filtered Jobs", expanded=False):
+            st.dataframe(filtered_df, use_container_width=True, hide_index=True)
     
     st.divider()
     st.subheader("Update Job Status")

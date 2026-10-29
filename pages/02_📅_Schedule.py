@@ -122,9 +122,9 @@ required_trains = st.sidebar.slider(
     "Number of Service Trains Required (Peak)",
     min_value=15,
     max_value=50,
-    value=30
+    value=45
 )
-st.sidebar.caption("💡 Set to ~30 to ensure surplus falls into STANDBY.")
+st.sidebar.caption("💡 Recommended: 45 for standard peak operation.")
 
 # "What-if" scenario
 st.sidebar.markdown("---")
@@ -195,29 +195,11 @@ if 'generated_schedule_df' in st.session_state:
     alerts = st.session_state['generated_alerts']
     target_date_disp = st.session_state.get('generated_date', target_date)
     
-    route_caps = {'Red Line': 25, 'Blue Line': 23, 'Green Line': 12}
-    
-    if True: # Preserve indentation
-        # BUG 2 FIX: Compute KPIs from DB ground truth, not GA in-memory output
-        try:
-            from utils.db_utils import db
-            today_str = datetime.date.today().strftime('%Y-%m-%d')
-            kpi_df = db.fetch_dataframe(
-                "SELECT assignment_status, COUNT(*) as cnt FROM train_assignments "
-                "WHERE date = %s GROUP BY assignment_status", (today_str,)
-            )
-            if kpi_df is not None and not kpi_df.empty:
-                kpi_map = dict(zip(kpi_df['assignment_status'].str.upper(), kpi_df['cnt']))
-                service_count   = int(kpi_map.get('SERVICE', 0))
-                standby_count   = int(kpi_map.get('STANDBY', 0))
-                maintenance_count = int(kpi_map.get('MAINTENANCE', 0))
-            else:
-                raise ValueError("No DB rows")
-        except Exception:
-            # Fallback to in-memory schedule if DB unavailable
-            service_count     = len(schedule_df[schedule_df["Assignment"] == "SERVICE"])
-            standby_count     = len(schedule_df[schedule_df["Assignment"] == "STANDBY"])
-            maintenance_count = len(schedule_df[schedule_df["Assignment"] == "MAINTENANCE"])
+    if True:
+        # Compute KPIs directly from the active computed schedule
+        service_count     = len(schedule_df[schedule_df["Assignment"] == "SERVICE"])
+        standby_count     = len(schedule_df[schedule_df["Assignment"] == "STANDBY"])
+        maintenance_count = len(schedule_df[schedule_df["Assignment"] == "MAINTENANCE"])
 
         st.success(f"✅ Master Schedule successfully computed for {target_date_disp.strftime('%B %d, %Y')}.")
 
@@ -280,13 +262,23 @@ if 'generated_schedule_df' in st.session_state:
                 # Add current time line if looking at today
                 if target_date == datetime.date.today():
                     current_time = datetime.datetime.now()
-                    fig_gantt.add_vline(x=current_time, line_width=2, line_dash="dash", line_color="black")
-                    # Bypass Plotly's internal shape mean-calculation bug for datetimes by using standard annotation
-                    fig_gantt.add_annotation(
-                        x=current_time, y=1, yref="paper", 
-                        text="Current Time", showarrow=False, 
-                        xanchor="left", bgcolor="rgba(255, 255, 255, 0.8)"
+                    fig_gantt.add_vline(
+                        x=current_time,
+                        line_width=2,
+                        line_dash="dash",
+                        line_color="#FACC15"
                     )
+                    # Yellow annotation matching the line color, with dark translucent background
+                    fig_gantt.add_annotation(
+    x=current_time,
+    y=1,
+    yref="paper",
+    text="Current Time",
+    showarrow=False,
+    xanchor="left",
+    font=dict(color="#FACC15", size=12),
+    bgcolor="rgba(0,0,0,0.6)"
+)
                 
                 st.plotly_chart(fig_gantt, use_container_width=True)
             else:
@@ -376,12 +368,17 @@ if 'generated_schedule_df' in st.session_state:
         # ===== TAB 3: HMRL ROUTE OPTIMIZER (merged with Route Map) =====
         with tab_route_opt:
             st.subheader("🚇 Intelligent Route Balancing")
-            st.info("Algorithms natively analyze Red (Miyapur ↔ LB Nagar), Green (JBS ↔ MGBS), and Blue (Nagole ↔ Raidurg) lines.")
+            st.info("Algorithms natively analyze Red (Miyapur ↔ LB Nagar), Blue (Raidurg ↔ Nagole), and Green (JBS ↔ MGBS) lines.")
 
             # --- Route Map Section (merged from old Route Map tab) ---
             if service_count > 0:
                 route_summary = schedule_df[schedule_df['Assignment'] == 'SERVICE']['Route'].value_counts().reset_index()
                 route_summary.columns = ['Route', 'Assigned_Trains']
+                route_caps = {
+                    'Red Line': 25,
+                    'Blue Line': 23,
+                    'Green Line': 12
+                }
                 route_summary['Capacity_Max'] = route_summary['Route'].map(route_caps)
                 route_summary['Utilization_%'] = (route_summary['Assigned_Trains'] / route_summary['Capacity_Max'] * 100).round(1)
                 
@@ -633,3 +630,8 @@ if 'generated_schedule_df' in st.session_state:
 
 from components.custom_widgets import render_page_nav
 render_page_nav('pages/01_🏠_Home.py', '🏠 Home', 'pages/03_🔧_Maintenance.py', '🔧 Maintenance')
+st.divider()
+col1, col2 = st.columns([8, 2])
+with col2:
+    if st.button("🔧 Go to Maintenance →", use_container_width=True):
+        st.switch_page("pages/03_🔧_Maintenance.py")

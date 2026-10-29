@@ -324,11 +324,16 @@ class AdvancedMaintenancePredictor:
             logger.error(f"Prediction error: {e}")
             return self._fallback_predict(feature_row)
 
-        if maint_prob >= 0.55:
+        # Updated thresholds for more realistic risk distribution
+        # Low:    prob < 0.30
+        # Medium: 0.30 <= prob < 0.55
+        # High:   0.55 <= prob < 0.75
+        # Critical: prob >= 0.75
+        if maint_prob >= 0.75:
             risk = 'CRITICAL'
-        elif maint_prob >= 0.35:
+        elif maint_prob >= 0.55:
             risk = 'HIGH'
-        elif maint_prob >= 0.20:
+        elif maint_prob >= 0.30:
             risk = 'MEDIUM'
         else:
             risk = 'LOW'

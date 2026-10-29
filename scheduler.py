@@ -98,10 +98,10 @@ def generate_schedule(required_service_trains=45, save_to_db=False):
             fitness_df["Train_ID"] == train_id
         ]
 
-        valid_fitness = all(
-            (pd.to_datetime(cert["Valid_Until"]) >= datetime.now())
-            and (cert["Status"] == "Valid")
-            for _, cert in train_fitness.iterrows()
+        # Check fitness certificate validity: Valid certificate status without expired flags
+        valid_fitness = (
+            len(train_fitness) > 0
+            and all(cert["Status"] == "Valid" for _, cert in train_fitness.iterrows())
         )
 
         train_jobs = maintenance_df[
@@ -114,34 +114,39 @@ def generate_schedule(required_service_trains=45, save_to_db=False):
             for _, job in train_jobs.iterrows()
         )
 
-        # ===== Scoring =====
+        is_already_in_maintenance = (train["Status"] == "Maintenance")
+
+        # ===== Scoring & Eligibility =====
 
         score = 100
         reason = "Available"
 
-        if not valid_fitness:
+        if is_already_in_maintenance:
             score = 0
-            reason = "Invalid fitness certificate"
+            reason = "Active depot maintenance"
         elif has_critical_job:
             score = 0
-            reason = "Critical maintenance pending"
-        elif train["Status"] == "Maintenance":
-            score = 0
-            reason = "Already in maintenance"
+            reason = "Critical maintenance job open"
+        elif not valid_fitness:
+            # Overdue for certificate renewal — prioritized for inspection / standby
+            score = 45
+            reason = "Fitness inspection pending"
+        elif train["Status"] == "Standby":
+            score = 65
+            reason = "Standby reserve"
         else:
-
             mileage_deviation = train["Current_Mileage"] - fleet_avg_mileage
 
             if ai_prediction == 1:
-                score -= 40
+                score -= 30
 
             if mileage_deviation > 2000:
-                score -= 25
+                score -= 20
             elif mileage_deviation < -2000:
                 score += 15
 
-            if train["Brand_Contract"] == "Yes":
-                score += 20
+            if train.get("Brand_Contract") == "Yes":
+                score += 15
 
             if days_since_maint < 15:
                 score += 10
@@ -165,34 +170,27 @@ def generate_schedule(required_service_trains=45, save_to_db=False):
         "Priority_Score", ascending=False
     ).reset_index(drop=True)
 
-    # ===== Assignment =====
+    # ===== Realistic Classification =====
+    # Default unassigned available trains to STANDBY reserve rather than maintenance
+    schedule_df["Assignment"] = "STANDBY"
 
-    schedule_df["Assignment"] = "MAINTENANCE"
+    # Mandatory maintenance: trains with active depot maintenance or critical open jobs (score == 0)
+    schedule_df.loc[schedule_df["Priority_Score"] == 0, "Assignment"] = "MAINTENANCE"
 
-    available_trains = schedule_df[
-        schedule_df["Priority_Score"] > 0
-    ]
-
+    # Active Service candidates: available healthy trains
+    available_trains = schedule_df[schedule_df["Priority_Score"] > 0]
     service_count = min(required_service_trains, len(available_trains))
 
+    # Top healthy trains assigned to active core revenue service (~70-80% of fleet)
     schedule_df.loc[
         schedule_df.index[:service_count],
         "Assignment",
     ] = "SERVICE"
 
-    if len(available_trains) > service_count:
-        standby_limit = min(
-            service_count + 5, len(available_trains)
-        )
-        schedule_df.loc[
-            schedule_df.index[service_count:standby_limit],
-            "Assignment",
-        ] = "STANDBY"
-
     # ===== Alerts =====
-
-    # Fitness expiring soon
     for _, cert in fitness_df.iterrows():
+        if cert.get("Status") == "Expired":
+            alerts.append(f"{cert['Train_ID']} - {cert['Department']} certificate is expired")
         days_until_expiry = (
             pd.to_datetime(cert["Valid_Until"]) - datetime.now()
         ).days

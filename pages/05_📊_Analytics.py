@@ -46,7 +46,21 @@ try:
         st.subheader("Fleet Status Distribution")
         status_counts = trains_df['Status'].value_counts().reset_index()
         status_counts.columns = ['Status', 'Count']
-        fig_pie = px.pie(status_counts, names='Status', values='Count', hole=0.4, title="Current Fleet Assignment Status")
+        fig_pie = px.pie(
+            status_counts, 
+            names='Status', 
+            values='Count', 
+            hole=0.45, 
+            title="Current Fleet Assignment Status",
+            color_discrete_sequence=['#10B981', '#F59E0B', '#EF4444', '#3B82F6']
+        )
+        fig_pie.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="rgba(15, 23, 42, 0.4)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=20, r=20, t=40, b=20),
+            font=dict(family="Outfit, sans-serif")
+        )
         st.plotly_chart(fig_pie, use_container_width=True)
         
     with col2:
@@ -55,10 +69,22 @@ try:
             schedule_df, _ = get_cached_schedule()
             
         risk_df = schedule_df[['Train_ID', 'AI_Risk_Percent']].sort_values('AI_Risk_Percent', ascending=False).head(15)
-        fig_bar = px.bar(risk_df, x='Train_ID', y='AI_Risk_Percent', 
-                         title="Top 15 Trains by AI Maintenance Risk (%)", 
-                         labels={'Train_ID': 'Train', 'AI_Risk_Percent': 'Risk Score (%)'},
-                         color='AI_Risk_Percent', color_continuous_scale='Reds')
+        fig_bar = px.bar(
+            risk_df, 
+            x='Train_ID', 
+            y='AI_Risk_Percent', 
+            title="Top 15 Trains by AI Maintenance Risk (%)", 
+            labels={'Train_ID': 'Train', 'AI_Risk_Percent': 'Risk Score (%)'},
+            color='AI_Risk_Percent', 
+            color_continuous_scale='Reds'
+        )
+        fig_bar.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="rgba(15, 23, 42, 0.4)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=20, r=20, t=40, b=20),
+            font=dict(family="Outfit, sans-serif")
+        )
         st.plotly_chart(fig_bar, use_container_width=True)
     
 
